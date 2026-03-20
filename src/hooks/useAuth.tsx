@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useConnect, useDisconnect, useEnsName, useEnsAvatar } from "wagmi";
 import type { Address } from "viem";
