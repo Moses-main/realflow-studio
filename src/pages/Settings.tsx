@@ -1,0 +1,355 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Settings as SettingsIcon, User, Bell, Shield, Palette,
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Sidebar from "@/components/layout/Sidebar";
+import { useAuth } from "@/hooks/useAuth";
+
+const Settings = () => {
+  const { user, connectWallet } = useAuth();
+  const [notifications, setNotifications] = useState({
+    email: true,
+    push: true,
+    trades: true,
+    marketing: false,
+  });
+  const [copied, setCopied] = useState(false);
+
+  const copyAddress = () => {
+    if (user.address) {
+      navigator.clipboard.writeText(user.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Sidebar />
+      
+      <main className="lg:pl-64">
+        {/* Mobile Header */}
+        <header className="sticky top-0 z-30 glass-strong border-b border-border px-4 py-4 lg:px-8 lg:h-16 flex items-center">
+          <h1 className="text-lg font-semibold lg:hidden">Settings</h1>
+          <h1 className="hidden lg:block text-xl font-semibold">Settings</h1>
+        </header>
+
+        <div className="p-4 lg:p-8">
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full lg:w-auto grid-cols-2 lg:grid-cols-4 h-auto p-1">
+              <TabsTrigger value="profile" className="gap-2">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Profile</span>
+              </TabsTrigger>
+              <TabsTrigger value="wallet" className="gap-2">
+                <Wallet className="w-4 h-4" />
+                <span className="hidden sm:inline">Wallet</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-2">
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Alerts</span>
+              </TabsTrigger>
+              <TabsTrigger value="appearance" className="gap-2">
+                <Palette className="w-4 h-4" />
+                <span className="hidden sm:inline">Appearance</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Settings</CardTitle>
+                  <CardDescription>Manage your account information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl font-bold text-primary-foreground">
+                      {user.address ? `${user.address.slice(2, 4)}` : "?"}
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {user.address ? `${user.address.slice(0, 6)}...${user.address.slice(-4)}` : "Not Connected"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Polygon Amoy</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username</Label>
+                      <Input id="username" placeholder="Enter username" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" placeholder="Enter email" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <textarea
+                      id="bio"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Tell us about yourself"
+                    />
+                  </div>
+
+                  <Button>Save Changes</Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="wallet" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connected Wallet</CardTitle>
+                  <CardDescription>Manage your connected wallet</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {user.isWalletConnected ? (
+                    <>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                            <Wallet className="w-5 h-5 text-primary-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-medium capitalize">{user.walletType || "Wallet"}</p>
+                            <p className="text-sm text-muted-foreground font-mono">
+                              {user.address}
+                            </p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={copyAddress}>
+                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1">View on Explorer</Button>
+                        <Button variant="destructive" className="flex-1">Disconnect</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground mb-4">No wallet connected</p>
+                      <Button onClick={connectWallet}>Connect Wallet</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contract Settings</CardTitle>
+                  <CardDescription>Configure deployed contracts</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>RWATokenizer Address</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value="0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be" 
+                        readOnly 
+                        className="font-mono text-sm"
+                      />
+                      <Button variant="outline" onClick={copyAddress}>
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>MarketplaceFactory Address</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value="0x802A6843516f52144b3F1D04E5447A085d34aF37" 
+                        readOnly 
+                        className="font-mono text-sm"
+                      />
+                      <Button variant="outline" onClick={copyAddress}>
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Network</Label>
+                    <Select defaultValue="amoy">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="amoy">Polygon Amoy (Testnet)</SelectItem>
+                        <SelectItem value="mainnet">Polygon Mainnet</SelectItem>
+                        <SelectItem value="sepolia">Sepolia (Testnet)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="notifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notification Preferences</CardTitle>
+                  <CardDescription>Choose what notifications you want to receive</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Bell className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Email Notifications</p>
+                        <p className="text-sm text-muted-foreground">Receive updates via email</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={notifications.email}
+                      onCheckedChange={(checked) => setNotifications(n => ({...n, email: checked}))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Bell className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Push Notifications</p>
+                        <p className="text-sm text-muted-foreground">Receive browser push notifications</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={notifications.push}
+                      onCheckedChange={(checked) => setNotifications(n => ({...n, push: checked}))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Trade Alerts</p>
+                        <p className="text-sm text-muted-foreground">Notifications for trades & transactions</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={notifications.trades}
+                      onCheckedChange={(checked) => setNotifications(n => ({...n, trades: checked}))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Globe className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Marketing</p>
+                        <p className="text-sm text-muted-foreground">News, tips, and promotional content</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={notifications.marketing}
+                      onCheckedChange={(checked) => setNotifications(n => ({...n, marketing: checked}))}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="appearance" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Appearance</CardTitle>
+                  <CardDescription>Customize the look and feel</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Theme</Label>
+                    <Select defaultValue="dark">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dark">Dark</SelectItem>
+                        <SelectItem value="light">Light</SelectItem>
+                        <SelectItem value="system">System</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Language</Label>
+                    <Select defaultValue="en">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Español</SelectItem>
+                        <SelectItem value="pt">Português</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency Display</Label>
+                    <Select defaultValue="usd">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="usd">USD ($)</SelectItem>
+                        <SelectItem value="eur">EUR (€)</SelectItem>
+                        <SelectItem value="ars">ARS ($)</SelectItem>
+                        <SelectItem value="ngn">NGN (₦)</SelectItem>
+                        <SelectItem value="mxn">MXN ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Help & Support</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4" />
+                      Documentation
+                    </span>
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <Key className="w-4 h-4" />
+                      API Keys
+                    </span>
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Settings;
