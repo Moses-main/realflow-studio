@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Bell, Shield, Palette,
-  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,19 @@ import {
 } from "@/components/ui/card";
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+
+interface ProfileForm {
+  username: string;
+  email: string;
+  bio: string;
+}
+
+const STORAGE_KEY = "realflow-user-profile";
 
 const Settings = () => {
-  const { user, connectWallet } = useAuth();
+  const { user, connectWallet, disconnectWallet } = useAuth();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -35,6 +45,67 @@ const Settings = () => {
     marketing: false,
   });
   const [copied, setCopied] = useState(false);
+  const [profile, setProfile] = useState<ProfileForm>({
+    username: "",
+    email: "",
+    bio: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        setProfile(JSON.parse(saved));
+      } catch (e) {
+        console.warn("Failed to load profile:", e);
+      }
+    }
+  }, []);
+
+  const handleProfileChange = (field: keyof ProfileForm, value: string) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile.username.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Username is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+      setHasChanges(false);
+      toast({
+        title: "Success",
+        description: "Profile saved successfully",
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to save profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const copyAddress = () => {
     if (user.address) {
@@ -98,11 +169,22 @@ const Settings = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="username">Username</Label>
-                      <Input id="username" placeholder="Enter username" />
+                      <Input 
+                        id="username" 
+                        placeholder="Enter username"
+                        value={profile.username}
+                        onChange={(e) => handleProfileChange("username", e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="Enter email" />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="Enter email"
+                        value={profile.email}
+                        onChange={(e) => handleProfileChange("email", e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -112,10 +194,21 @@ const Settings = () => {
                       id="bio"
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       placeholder="Tell us about yourself"
+                      value={profile.bio}
+                      onChange={(e) => handleProfileChange("bio", e.target.value)}
                     />
                   </div>
 
-                  <Button>Save Changes</Button>
+                  <Button onClick={handleSaveProfile} disabled={isSaving || !hasChanges}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -146,8 +239,21 @@ const Settings = () => {
                         </Button>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1">View on Explorer</Button>
-                        <Button variant="destructive" className="flex-1">Disconnect</Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          View on Explorer
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          className="flex-1"
+                          onClick={disconnectWallet}
+                        >
+                          Disconnect
+                        </Button>
                       </div>
                     </>
                   ) : (
