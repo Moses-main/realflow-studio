@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
   Blocks, Plus, TrendingUp, Package, Users, DollarSign,
-  ArrowRight, BarChart3, Settings, Wallet, Globe, Menu, X, LogOut, Eye, Building2, Check
+  ArrowRight, BarChart3, Settings, Wallet, Globe, Menu, X, LogOut, Eye, Building2, Check, Sun, Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,6 +64,7 @@ const Dashboard = () => {
   const { user, connectWallet, disconnectWallet } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-background">
@@ -228,6 +230,17 @@ const Dashboard = () => {
         <header className="sticky top-0 z-30 glass-strong border-b border-border px-4 lg:px-8 h-16 flex items-center justify-between">
           <h1 className="text-lg lg:text-xl font-semibold hidden lg:block">Dashboard</h1>
           <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto justify-end">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              title="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
+            </button>
             {user.isWalletConnected ? (
               <Button variant="outline" size="sm" className="gap-2">
                 <Wallet className="w-4 h-4" />

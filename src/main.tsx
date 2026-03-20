@@ -10,6 +10,7 @@ import { InjectedConnector } from "wagmi/connectors/injected";
 import { WalletConnectConnector } from "@wagmi/connectors/walletConnect";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { Chain } from "wagmi";
+import { ThemeProvider } from "next-themes";
 
 const polygonAmoy: Chain = {
   id: 80002,
@@ -76,10 +77,12 @@ const wagmiConfig = createConfig({
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <WagmiConfig config={wagmiConfig}>
-      <PrivyProvider appId={PRIVY_APP_ID}>
-        <App />
-      </PrivyProvider>
-    </WagmiConfig>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <WagmiConfig config={wagmiConfig}>
+        <PrivyProvider appId={PRIVY_APP_ID}>
+          <App />
+        </PrivyProvider>
+      </WagmiConfig>
+    </ThemeProvider>
   </React.StrictMode>,
 );
