@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye, Share2, Link
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye, Share2, Link, LayoutTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -88,6 +88,7 @@ const Builder = () => {
   const [exportingToGithub, setExportingToGithub] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -559,6 +560,9 @@ contract Marketplace is ERC1155, Ownable {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <button onClick={() => setShowTemplates(true)} className="p-1 hover:bg-secondary rounded" title="Templates">
+                      <LayoutTemplate className="w-4 h-4" />
+                    </button>
                     <button onClick={() => setShowShareDialog(true)} className="p-1 hover:bg-secondary rounded" title="Share">
                       <Share2 className="w-4 h-4" />
                     </button>
@@ -1357,6 +1361,149 @@ contract Marketplace is ERC1155, Ownable {
 
                   <p className="text-xs text-muted-foreground">
                     Share this link to let others view or import your marketplace design.
+                  </p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showTemplates && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowTemplates(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-background rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-border flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <LayoutTemplate className="w-5 h-5" />
+                    Marketplace Templates
+                  </h3>
+                  <button onClick={() => setShowTemplates(false)} className="p-1 hover:bg-secondary rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => {
+                        setNodes([
+                          { id: "1", type: "custom", position: { x: 100, y: 50 }, data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" } },
+                          { id: "2", type: "custom", position: { x: 100, y: 200 }, data: { label: "Mint Button", componentType: "mintButton", category: "Core" } },
+                          { id: "3", type: "custom", position: { x: 100, y: 350 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
+                          { id: "4", type: "custom", position: { x: 400, y: 200 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
+                          { id: "5", type: "custom", position: { x: 400, y: 350 }, data: { label: "Filter Panel", componentType: "filterPanel", category: "UI" } },
+                        ]);
+                        setEdges([
+                          { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                          { id: "e2-3", source: "2", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                        ]);
+                        idCounter.current = 6;
+                        setShowTemplates(false);
+                        toast({ title: "Template loaded!", description: "NFT Marketplace template applied" });
+                      }}
+                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
+                    >
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
+                        <Blocks className="w-6 h-6 text-primary" />
+                      </div>
+                      <h4 className="font-medium mb-1">NFT Marketplace</h4>
+                      <p className="text-xs text-muted-foreground">Basic NFT trading with minting, listing, and search</p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setNodes([
+                          { id: "1", type: "custom", position: { x: 100, y: 50 }, data: { label: "User Profile", componentType: "userProfile", category: "Core" } },
+                          { id: "2", type: "custom", position: { x: 400, y: 50 }, data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" } },
+                          { id: "3", type: "custom", position: { x: 100, y: 200 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
+                          { id: "4", type: "custom", position: { x: 400, y: 200 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
+                        ]);
+                        setEdges([
+                          { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                        ]);
+                        idCounter.current = 5;
+                        setShowTemplates(false);
+                        toast({ title: "Template loaded!", description: "Creator Portfolio template applied" });
+                      }}
+                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
+                    >
+                      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-3">
+                        <Sparkles className="w-6 h-6 text-accent" />
+                      </div>
+                      <h4 className="font-medium mb-1">Creator Portfolio</h4>
+                      <p className="text-xs text-muted-foreground">Showcase and sell creator works</p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setNodes([
+                          { id: "1", type: "custom", position: { x: 100, y: 50 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
+                          { id: "2", type: "custom", position: { x: 400, y: 50 }, data: { label: "Filter Panel", componentType: "filterPanel", category: "UI" } },
+                          { id: "3", type: "custom", position: { x: 250, y: 200 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
+                          { id: "4", type: "custom", position: { x: 250, y: 350 }, data: { label: "User Profile", componentType: "userProfile", category: "Core" } },
+                        ]);
+                        setEdges([
+                          { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                          { id: "e2-3", source: "2", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                          { id: "e3-4", source: "3", target: "4", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                        ]);
+                        idCounter.current = 5;
+                        setShowTemplates(false);
+                        toast({ title: "Template loaded!", description: "Digital Gallery template applied" });
+                      }}
+                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
+                    >
+                      <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-3">
+                        <LayoutTemplate className="w-6 h-6" />
+                      </div>
+                      <h4 className="font-medium mb-1">Digital Gallery</h4>
+                      <p className="text-xs text-muted-foreground">Browse and explore digital art collections</p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setNodes([
+                          { id: "1", type: "custom", position: { x: 250, y: 50 }, data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" } },
+                          { id: "2", type: "custom", position: { x: 100, y: 200 }, data: { label: "Mint Button", componentType: "mintButton", category: "Core" } },
+                          { id: "3", type: "custom", position: { x: 400, y: 200 }, data: { label: "User Profile", componentType: "userProfile", category: "Core" } },
+                          { id: "4", type: "custom", position: { x: 100, y: 350 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
+                          { id: "5", type: "custom", position: { x: 400, y: 350 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
+                          { id: "6", type: "custom", position: { x: 400, y: 500 }, data: { label: "Filter Panel", componentType: "filterPanel", category: "UI" } },
+                        ]);
+                        setEdges([
+                          { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                          { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                          { id: "e3-5", source: "3", target: "5", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                          { id: "e3-6", source: "3", target: "6", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
+                        ]);
+                        idCounter.current = 7;
+                        setShowTemplates(false);
+                        toast({ title: "Template loaded!", description: "Full Platform template applied" });
+                      }}
+                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
+                    >
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
+                        <Rocket className="w-6 h-6 text-primary" />
+                      </div>
+                      <h4 className="font-medium mb-1">Full Platform</h4>
+                      <p className="text-xs text-muted-foreground">Complete marketplace with all features</p>
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4 border-t border-border">
+                  <p className="text-xs text-muted-foreground text-center">
+                    Templates provide a starting point. Customize freely!
                   </p>
                 </div>
               </motion.div>
