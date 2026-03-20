@@ -170,6 +170,8 @@ const Builder = () => {
     setShowDeployConfirm(false);
     setDeploying(true);
     setTxStatus("pending");
+    setDeployed(false);
+    setDeployAddress("");
     const mockTxHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
     setTxHash(mockTxHash);
 
@@ -195,16 +197,14 @@ const Builder = () => {
       } else {
         throw new Error("Deployment failed");
       }
-    } catch {
-      setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
-      setDeployed(true);
-      setTxStatus("success");
-      toast({
-        title: "Marketplace Deployed!",
-        description: "Deployed to Polygon Amoy testnet",
-      });
-    } finally {
+    } catch (error) {
+      setTxStatus("failed");
       setDeploying(false);
+      toast({
+        title: "Deployment Failed",
+        description: error instanceof Error ? error.message : "Failed to deploy marketplace. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
