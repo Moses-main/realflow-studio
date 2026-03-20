@@ -8,31 +8,33 @@ import {
 import Sidebar from "@/components/layout/Sidebar";
 import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/components/theme/LanguageSwitcher";
 
-const stats = [
-  { label: "Total Value Locked", value: "$124,500", change: "+12.5%", icon: TrendingUp, positive: true },
-  { label: "Transactions", value: "1,284", change: "+8.2%", icon: TrendingUp, positive: true },
-  { label: "NFTs Minted", value: "892", change: "+15.3%", icon: TrendingUp, positive: true },
-  { label: "Platform Fee", value: "0.5%", change: null, icon: Wallet, positive: true },
-];
-
-const recentMarketplaces = [
-  { name: "Real Estate Fund #1", status: "active", txs: 234, value: "$45,200", date: "2h ago" },
-  { name: "Art Collection", status: "active", txs: 89, value: "$12,500", date: "5h ago" },
-  { name: "Commodity Tokens", status: "pending", txs: 0, value: "$0", date: "1d ago" },
-  { name: "Music Rights NFTs", status: "active", txs: 156, value: "$28,300", date: "2d ago" },
-];
-
-const templates = [
-  { name: "NFT Marketplace", desc: "Basic trading", components: 5 },
-  { name: "Creator Portfolio", desc: "Showcase works", components: 4 },
-  { name: "Digital Gallery", desc: "Browse collections", components: 4 },
-  { name: "Full Platform", desc: "All features", components: 6 },
-];
-
-export default function Dashboard() {
+const Dashboard = () => {
   const navigate = useNavigate();
   const { user, connectWallet } = useAuth();
+  const { t } = useLanguage();
+  
+  const stats = [
+    { label: t("dashboard.stats.totalValue"), value: "$124,500", change: "+12.5%", icon: TrendingUp, positive: true },
+    { label: t("dashboard.stats.transactions"), value: "1,284", change: "+8.2%", icon: TrendingUp, positive: true },
+    { label: t("dashboard.stats.nfts"), value: "892", change: "+15.3%", icon: TrendingUp, positive: true },
+    { label: t("dashboard.stats.fee"), value: "0.5%", change: null, icon: Wallet, positive: true },
+  ];
+
+  const recentMarketplaces = [
+    { name: "Real Estate Fund #1", status: "active", txs: 234, value: "$45,200", date: "2h ago" },
+    { name: "Art Collection", status: "active", txs: 89, value: "$12,500", date: "5h ago" },
+    { name: "Commodity Tokens", status: "pending", txs: 0, value: "$0", date: "1d ago" },
+    { name: "Music Rights NFTs", status: "active", txs: 156, value: "$28,300", date: "2d ago" },
+  ];
+
+  const templates = [
+    { name: "NFT Marketplace", desc: "Basic trading", components: 5 },
+    { name: "Creator Portfolio", desc: "Showcase works", components: 4 },
+    { name: "Digital Gallery", desc: "Browse collections", components: 4 },
+    { name: "Full Platform", desc: "All features", components: 6 },
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex">
@@ -51,7 +53,7 @@ export default function Dashboard() {
                 <span className="hidden sm:inline">Home</span>
               </button>
               <div className="w-px h-4 bg-[var(--border)]" />
-              <h1 className="text-base font-semibold text-[var(--text-primary)]">Dashboard</h1>
+              <h1 className="text-base font-semibold text-[var(--text-primary)]">{t("dashboard.title")}</h1>
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggleDropdown />
@@ -67,7 +69,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <button onClick={connectWallet} className="btn-primary text-sm">
-                  Connect Wallet
+                  {t("common.connect")}
                 </button>
               )}
             </div>
@@ -86,7 +88,7 @@ export default function Dashboard() {
               className="btn-primary flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              New Marketplace
+              {t("marketplaces.create")}
             </button>
           </div>
 
