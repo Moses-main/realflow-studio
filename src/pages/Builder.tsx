@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +69,7 @@ const Builder = () => {
   const [deployed, setDeployed] = useState(false);
   const [deployAddress, setDeployAddress] = useState("");
   const [showPinningReminder, setShowPinningReminder] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -201,7 +202,102 @@ const Builder = () => {
   return (
     <ReactFlowProvider>
       <div className="h-screen flex bg-background">
-        <div className="w-60 border-r border-border flex flex-col glass-strong shrink-0">
+        {/* Mobile sidebar toggle */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 z-30 p-2 glass rounded-lg md:hidden"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Sidebar overlay for mobile */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                onClick={() => setSidebarOpen(false)}
+              />
+              <motion.div
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed left-0 top-0 h-full w-[280px] glass-strong border-r border-border z-50 md:hidden flex flex-col"
+              >
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-secondary transition-colors">
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                        <Blocks className="w-3 h-3 text-primary-foreground" />
+                      </div>
+                      <span className="font-semibold text-sm">Builder</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-secondary rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Components</span>
+                    <span className="text-xs text-primary">{nodes.length} added</span>
+                  </div>
+                  <ComponentPalette onDragStart={(item) => { draggedItem.current = item; }} />
+                </div>
+                <div className="p-4 border-t border-border space-y-2">
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleSave}>
+                      <Save className="w-3 h-3" /> Save
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleExport}>
+                      <Download className="w-3 h-3" /> Export
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1 text-destructive hover:text-destructive"
+                    onClick={handleClear}
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear
+                  </Button>
+                  <Button
+                    className="w-full gap-2"
+                    onClick={handleDeploy}
+                    disabled={deploying || deployed}
+                  >
+                    {deploying ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Deploying...
+                      </>
+                    ) : deployed ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Deployed!
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="w-4 h-4" />
+                        Deploy
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Desktop sidebar */}
+        <div className="w-60 border-r border-border flex-col glass-strong shrink-0 hidden md:flex">
           <div className="flex items-center gap-2 p-4 border-b border-border">
             <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-secondary transition-colors">
               <ArrowLeft className="w-4 h-4" />
@@ -286,21 +382,22 @@ const Builder = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-xl px-6 py-4 glow-primary flex items-center gap-4"
+                className="absolute bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-auto glass rounded-xl px-4 py-3 md:px-6 md:py-4 glow-primary flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4"
               >
-                <Check className="w-5 h-5 text-primary" />
-                <div>
+                <Check className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm">Marketplace Deployed!</div>
-                  <div className="text-xs text-muted-foreground font-mono">
+                  <div className="text-xs text-muted-foreground font-mono truncate">
                     {deployAddress.slice(0, 10)}... on Polygon Amoy
                   </div>
                 </div>
                 <Button 
                   size="sm" 
                   variant="outline"
+                  className="shrink-0"
                   onClick={() => window.open(`https://amoy.polygonscan.com/address/${deployAddress}`, "_blank")}
                 >
-                  View on Amoy Explorer
+                  View on Explorer
                 </Button>
               </motion.div>
             )}
@@ -312,28 +409,25 @@ const Builder = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute top-4 right-16 z-10 glass rounded-lg px-4 py-3 flex items-center gap-3 max-w-sm"
+                className="absolute top-16 right-4 z-10 glass rounded-lg px-3 py-2 flex items-center gap-2 max-w-xs hidden lg:flex"
               >
                 <Pin className="w-4 h-4 text-accent shrink-0" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium">Pin your data to IPFS</div>
-                  <div className="text-xs text-muted-foreground">
-                    Ensure your marketplace data persists by pinning it to IPFS
-                  </div>
+                  <div className="text-xs font-medium">Pin to IPFS</div>
                 </div>
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="shrink-0"
+                  className="shrink-0 h-7 text-xs"
                   onClick={() => window.open("https://app.pinata.cloud/", "_blank")}
                 >
-                  Pin via Pinata
+                  Pin
                 </Button>
                 <button 
                   onClick={() => setShowPinningReminder(false)}
                   className="text-muted-foreground hover:text-foreground shrink-0"
                 >
-                  <Check className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </button>
               </motion.div>
             )}
@@ -347,11 +441,11 @@ const Builder = () => {
           </button>
 
           {!user.isWalletConnected && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="glass rounded-lg px-4 py-2 text-sm flex items-center gap-2">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 md:left-auto md:right-4 md:translate-x-0 z-10">
+              <div className="glass rounded-lg px-3 py-2 text-xs md:text-sm flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-amber-500" />
-                Connect wallet to deploy
-                <Button size="sm" variant="outline" className="h-7" onClick={() => connectWallet()}>
+                <span className="hidden sm:inline">Connect wallet to deploy</span>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => connectWallet()}>
                   Connect
                 </Button>
               </div>
@@ -363,27 +457,35 @@ const Builder = () => {
           {aiOpen && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 400, opacity: 1 }}
+              animate={{ width: "100vw", opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="border-l border-border glass-strong overflow-hidden shrink-0"
+              className="fixed inset-0 border-l border-border glass-strong overflow-hidden shrink-0 z-50 md:relative md:w-80 lg:w-96"
             >
-              <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCreativeMode(false)}
+                    className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                      !creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    AI Chat
+                  </button>
+                  <button
+                    onClick={() => setCreativeMode(true)}
+                    className={`text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${
+                      creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Sparkles className="w-3 h-3" /> Creative
+                  </button>
+                </div>
                 <button
-                  onClick={() => setCreativeMode(false)}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                    !creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                  }`}
+                  onClick={() => setAiOpen(false)}
+                  className="p-1 hover:bg-secondary rounded md:hidden"
                 >
-                  AI Chat
-                </button>
-                <button
-                  onClick={() => setCreativeMode(true)}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${
-                    creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3" /> Creative Mode
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               {creativeMode ? <CreativeMode /> : <AISidebar />}
