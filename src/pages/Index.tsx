@@ -88,9 +88,9 @@ const Index = () => {
       </nav>
 
       <section className="relative pt-32 pb-20 px-6">
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-[var(--primary)]/10 rounded-full blur-3xl animate-pulse" />
         <div
-          className="absolute top-40 right-1/4 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse-glow"
+          className="absolute top-40 right-1/4 w-72 h-72 bg-[var(--info)]/10 rounded-full blur-3xl animate-pulse"
           style={{ animationDelay: "1s" }}
         />
 
