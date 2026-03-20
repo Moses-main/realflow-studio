@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const AI_REQUEST_TIMEOUT = 30000; // 30 seconds
 
 export interface AICodeRequest {
   description: string;
@@ -22,7 +23,15 @@ export interface VibeSuggestion {
   suggestion: string;
 }
 
+function createTimeoutController(timeoutMs: number = AI_REQUEST_TIMEOUT) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return { controller, timeoutId };
+}
+
 export async function generateCode(request: AICodeRequest): Promise<AICodeResponse> {
+  const { controller, timeoutId } = createTimeoutController();
+  
   try {
     const response = await fetch(`${API_URL}/api/ai/generate-code`, {
       method: "POST",
@@ -32,7 +41,10 @@ export async function generateCode(request: AICodeRequest): Promise<AICodeRespon
         contractType: request.contractType || "custom",
         vibeMode: request.vibeMode ?? true,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -40,7 +52,17 @@ export async function generateCode(request: AICodeRequest): Promise<AICodeRespon
 
     return await response.json();
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error("AI generate code error:", error);
+    
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return {
+        success: false,
+        code: generateFallbackCode(request.description, request.vibeMode),
+        error: "Request timed out - AI service is taking too long",
+      };
+    }
+    
     return {
       success: false,
       code: generateFallbackCode(request.description, request.vibeMode),
@@ -50,6 +72,8 @@ export async function generateCode(request: AICodeRequest): Promise<AICodeRespon
 }
 
 export async function optimizeCode(request: AIOptimizeRequest): Promise<AICodeResponse> {
+  const { controller, timeoutId } = createTimeoutController();
+  
   try {
     const response = await fetch(`${API_URL}/api/ai/optimize`, {
       method: "POST",
@@ -58,7 +82,10 @@ export async function optimizeCode(request: AIOptimizeRequest): Promise<AICodeRe
         code: request.code,
         optimizationType: request.optimizationType || "all",
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -66,7 +93,17 @@ export async function optimizeCode(request: AIOptimizeRequest): Promise<AICodeRe
 
     return await response.json();
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error("AI optimize error:", error);
+    
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return {
+        success: false,
+        code: request.code,
+        error: "Request timed out - AI service is taking too long",
+      };
+    }
+    
     return {
       success: false,
       code: request.code,
@@ -76,16 +113,31 @@ export async function optimizeCode(request: AIOptimizeRequest): Promise<AICodeRe
 }
 
 export async function getVibeSuggestion(theme: string): Promise<VibeSuggestion> {
+  const { controller, timeoutId } = createTimeoutController();
+  
   try {
-    const response = await fetch(`${API_URL}/api/ai/vibe-suggestion/${encodeURIComponent(theme)}`);
+    const response = await fetch(`${API_URL}/api/ai/vibe-suggestion/${encodeURIComponent(theme)}`, {
+      signal: controller.signal,
+    });
     
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
     return await response.json();
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error("Vibe suggestion error:", error);
+    
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return {
+        success: false,
+        suggestion: getDefaultVibeSuggestion(theme),
+      };
+    }
+    
     return {
       success: false,
       suggestion: getDefaultVibeSuggestion(theme),
