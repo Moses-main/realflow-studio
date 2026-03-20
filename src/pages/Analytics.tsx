@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   TrendingUp, Users, Package, DollarSign,
@@ -33,7 +34,10 @@ const assetBreakdown = [
 
 const Analytics = () => {
   const { user, connectWallet } = useAuth();
-  const maxVolume = Math.max(...volumeData.map(d => d.volume));
+  const maxVolume = useMemo(
+    () => Math.max(...volumeData.map(d => d.volume)),
+    []
+  );
 
   return (
     <div className="min-h-screen bg-background">
