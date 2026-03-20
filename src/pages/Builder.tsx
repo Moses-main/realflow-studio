@@ -145,7 +145,8 @@ const Builder = () => {
       } else {
         setGasEstimate("~0.02 MATIC (estimated)");
       }
-    } catch {
+    } catch (error) {
+      console.warn("Recoverable error during gas estimation:", error);
       setGasEstimate("~0.02 MATIC (estimated)");
     } finally {
       setEstimatingGas(false);
