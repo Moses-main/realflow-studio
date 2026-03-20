@@ -11,7 +11,16 @@ const router = Router();
 
 const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
 
-const networkSchema = z.enum(['polygon-amoy', 'polygon-mumbai', 'polygon-mainnet', 'sepolia', 'mainnet']).optional();
+const networkSchema = z.enum([
+  'polygon-amoy', 
+  'polygon-mainnet', 
+  'ethereum-sepolia', 
+  'ethereum-mainnet',
+  'arbitrum-sepolia',
+  'arbitrum-mainnet',
+  'base-sepolia',
+  'base-mainnet'
+]).default('polygon-amoy').optional();
 
 const contractInfoSchema = z.object({
   address: addressSchema,
