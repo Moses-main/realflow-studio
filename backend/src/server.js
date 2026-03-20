@@ -10,10 +10,23 @@ import { healthRouter } from './routes/health.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Validate required environment variables in production
+if (NODE_ENV === 'production') {
+  const required = ['CORS_ORIGIN'];
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
 
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: NODE_ENV === 'production' 
+    ? process.env.CORS_ORIGIN 
+    : process.env.CORS_ORIGIN || '*',
   credentials: true
 }));
 
