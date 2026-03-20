@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import ComponentPalette, { type PaletteItem } from "@/components/builder/ComponentPalette";
 import AISidebar from "@/components/builder/AISidebar";
 import CustomNode from "@/components/builder/CustomNode";
+import { CreativeMode } from "@/components/ai/CreativeMode";
 import { useAuth } from "@/hooks/useAuth";
 
 const nodeTypes = { custom: CustomNode };
@@ -63,6 +64,7 @@ const Builder = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [aiOpen, setAiOpen] = useState(true);
+  const [creativeMode, setCreativeMode] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [deployed, setDeployed] = useState(false);
   const [deployAddress, setDeployAddress] = useState("");
@@ -328,12 +330,30 @@ const Builder = () => {
           {aiOpen && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 360, opacity: 1 }}
+              animate={{ width: 400, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="border-l border-border glass-strong overflow-hidden shrink-0"
             >
-              <AISidebar />
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
+                <button
+                  onClick={() => setCreativeMode(false)}
+                  className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                    !creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  AI Chat
+                </button>
+                <button
+                  onClick={() => setCreativeMode(true)}
+                  className={`text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${
+                    creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" /> Creative Mode
+                </button>
+              </div>
+              {creativeMode ? <CreativeMode /> : <AISidebar />}
             </motion.div>
           )}
         </AnimatePresence>
