@@ -23,11 +23,8 @@ contract RWATokenizer is ERC1155, Ownable {
     // Event emitted when a new token is minted
     event TokenMinted(address indexed to, uint256 indexed tokenId, uint256 amount, string metadataURI);
 
-    /**
-     * @dev Constructor to initialize the base URI for the contract.
-     * @param baseURI The base URI for metadata.
-     */
-
+    // Event emitted when tokens are batch minted
+    event BatchMinted(address indexed to, uint256[] tokenIds, uint256[] amounts);
 
     /**
      * @dev Mint a new token representing a Real-World Asset (RWA).
@@ -45,6 +42,58 @@ contract RWATokenizer is ERC1155, Ownable {
         if (msg.sender != owner()) {
             revert UnauthorizedAccess(msg.sender);
         }
+        require(amount > 0, "RWATokenizer: Amount must be greater than zero");
+        require(bytes(metadataURI).length > 0, "RWATokenizer: Metadata URI is required");
+        require(bytes(_tokenURIs[tokenId]).length == 0, "RWATokenizer: Token ID already exists");
+
+        _mint(to, tokenId, amount, "");
+        _setTokenURI(tokenId, metadataURI);
+
+        emit TokenMinted(to, tokenId, amount, metadataURI);
+    }
+
+    /**
+     * @dev Batch mint multiple RWA tokens in a single transaction for gas efficiency.
+     * @param to The address to receive all minted tokens.
+     * @param tokenIds Array of unique token IDs.
+     * @param amounts Array of amounts for each token (must match tokenIds length).
+     * @param metadataURIs Array of IPFS URIs for each token (must match tokenIds length).
+     */
+    function mintRWA_Batch(
+        address to,
+        uint256[] calldata tokenIds,
+        uint256[] calldata amounts,
+        string[] calldata metadataURIs
+    ) external {
+        if (msg.sender != owner()) {
+            revert UnauthorizedAccess(msg.sender);
+        }
+        
+        uint256 length = tokenIds.length;
+        require(length == amounts.length && length == metadataURIs.length, "RWATokenizer: Array length mismatch");
+        require(length > 0 && length <= 50, "RWATokenizer: Batch size must be 1-50");
+
+        for (uint256 i = 0; i < length;) {
+            uint256 tokenId = tokenIds[i];
+            uint256 amount = amounts[i];
+            string memory metadataURI = metadataURIs[i];
+
+            require(amount > 0, "RWATokenizer: Amount must be greater than zero");
+            require(bytes(metadataURI).length > 0, "RWATokenizer: Metadata URI is required");
+            require(bytes(_tokenURIs[tokenId]).length == 0, "RWATokenizer: Token ID already exists");
+
+            _mint(to, tokenId, amount, "");
+            _setTokenURI(tokenId, metadataURI);
+
+            emit TokenMinted(to, tokenId, amount, metadataURI);
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit BatchMinted(to, tokenIds, amounts);
+    }
         require(amount > 0, "RWATokenizer: Amount must be greater than zero");
         require(bytes(metadataURI).length > 0, "RWATokenizer: Metadata URI is required");
         require(bytes(_tokenURIs[tokenId]).length == 0, "RWATokenizer: Token ID already exists");
