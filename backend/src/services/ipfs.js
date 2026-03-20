@@ -1,31 +1,48 @@
 import { create, CID } from 'ipfs-http-client';
 
 let ipfsClient = null;
+let clientCreationFailed = false;
+const MAX_RETRIES = 3;
 
 function getIPFSClient() {
+  if (clientCreationFailed) {
+    throw new Error('IPFS client unavailable - previous creation failed');
+  }
+  
   if (!ipfsClient) {
     const projectId = process.env.PINATA_API_KEY;
     const projectSecret = process.env.PINATA_API_SECRET;
     
-    if (projectId && projectSecret) {
-      ipfsClient = create({
-        host: 'ipfs.pinata.cloud',
-        port: 443,
-        protocol: 'https',
-        headers: {
-          pinata_api_key: projectId,
-          pinata_secret_api_key: projectSecret
-        }
-      });
-    } else {
-      ipfsClient = create({
-        host: 'ipfs.io',
-        port: 443,
-        protocol: 'https'
-      });
+    try {
+      if (projectId && projectSecret) {
+        ipfsClient = create({
+          host: 'ipfs.pinata.cloud',
+          port: 443,
+          protocol: 'https',
+          headers: {
+            pinata_api_key: projectId,
+            pinata_secret_api_key: projectSecret
+          }
+        });
+      } else {
+        ipfsClient = create({
+          host: 'ipfs.io',
+          port: 443,
+          protocol: 'https'
+        });
+      }
+      clientCreationFailed = false;
+    } catch (error) {
+      clientCreationFailed = true;
+      throw error;
     }
   }
   return ipfsClient;
+}
+
+function resetIPFSClient() {
+  ipfsClient = null;
+  clientCreationFailed = false;
 }
 
 export async function uploadToIPFS({ name, description, image, properties, assetType }) {
@@ -81,6 +98,9 @@ export async function pinMetadata(cid) {
     return { pinned: false, reason: 'Pinata API not configured' };
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
   try {
     const response = await fetch('https://api.pinata.cloud/pinning/pinByHash', {
       method: 'POST',
@@ -94,12 +114,24 @@ export async function pinMetadata(cid) {
         pinataMetadata: {
           name: `RealFlow-Studio-${Date.now()}`
         }
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
+    }
 
     const data = await response.json();
     return { pinned: true, pinataResponse: data };
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      return { pinned: false, reason: 'Pin request timed out' };
+    }
     console.error('Pinata pin error:', error);
     return { pinned: false, reason: error.message };
   }
