@@ -17,8 +17,10 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye, Share2, Link, LayoutTemplate
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye, Share2, Link, LayoutTemplate, FlaskConical
 } from "lucide-react";
+import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
+import { TestPanel } from "@/components/builder/TestPanel";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import ComponentPalette, { type PaletteItem } from "@/components/builder/ComponentPalette";
@@ -90,6 +92,7 @@ const Builder = () => {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified" | null>(null);
+  const [testMode, setTestMode] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -743,9 +746,26 @@ contract Marketplace is ERC1155, Ownable {
               <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => setShowExportDialog(true)}>
                 <Download className="w-3 h-3" /> Export
               </Button>
-              <Button size="sm" variant="outline" className="gap-1 px-2" onClick={() => setShowPreview(true)} title="Preview">
-                <Eye className="w-3 h-3" />
-              </Button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowPreview(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Preview
+              </button>
+              <button
+                onClick={() => setTestMode(!testMode)}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all ${
+                  testMode
+                    ? "bg-[var(--success-muted)] text-[var(--success)] border border-[var(--success)]/30"
+                    : "border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                Test Mode
+              </button>
             </div>
             <Button
               size="sm"
@@ -780,8 +800,20 @@ contract Marketplace is ERC1155, Ownable {
           </div>
         </div>
 
-        <div className="flex-1 relative min-h-0 h-full" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
-          <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <div className="flex-1 flex relative min-h-0 h-full">
+          {/* Test Mode Panel */}
+          <AnimatePresence>
+            {testMode && (
+              <TestPanel 
+                nodes={nodes} 
+                onClose={() => setTestMode(false)} 
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Canvas */}
+          <div className="flex-1 relative min-h-0 h-full" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
+            <div className="absolute top-4 left-4 z-10 flex gap-2">
             <button
               onClick={undo}
               disabled={historyIndex <= 0}
@@ -921,6 +953,7 @@ contract Marketplace is ERC1155, Ownable {
               </div>
             </div>
           )}
+        </div>
         </div>
 
         <AnimatePresence>
