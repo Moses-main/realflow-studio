@@ -70,7 +70,7 @@ export async function getContractInfo(address, network) {
     };
   } catch (error) {
     console.error('Contract info error:', error);
-    throw new Error('Failed to get contract info');
+    throw new Error(`Failed to get contract info: ${error.message}`);
   }
 }
 
@@ -101,7 +101,7 @@ export async function getTokenBalance(address, tokenAddress, network) {
     };
   } catch (error) {
     console.error('Balance check error:', error);
-    throw new Error('Failed to get balance');
+    throw new Error(`Failed to get balance: ${error.message}`);
   }
 }
 

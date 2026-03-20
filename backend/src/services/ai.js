@@ -68,7 +68,8 @@ ${vibeMode ? "Include playful comments like '// Vibing with gas savings!'" : ""}
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error('AI service unavailable');
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`AI service unavailable: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
     }
 
     const data = await response.json();
@@ -79,6 +80,9 @@ ${vibeMode ? "Include playful comments like '// Vibing with gas savings!'" : ""}
       throw new Error('AI request timed out');
     }
     console.error('AI generation error:', error);
+    if (error.message?.includes('AI service unavailable')) {
+      throw error;
+    }
     return generateMockCode(description, contractType, vibeMode);
   }
 }
