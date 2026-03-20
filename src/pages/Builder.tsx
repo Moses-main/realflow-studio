@@ -376,7 +376,7 @@ contract Marketplace is ERC1155, Ownable {
 
   return (
     <ReactFlowProvider>
-      <div className="h-screen flex bg-background">
+      <div className="h-screen flex bg-background overflow-hidden">
         {/* Mobile sidebar toggle */}
         <button
           onClick={() => setSidebarOpen(true)}
@@ -491,7 +491,7 @@ contract Marketplace is ERC1155, Ownable {
         </AnimatePresence>
 
         {/* Desktop sidebar */}
-        <div className="w-60 border-r border-border flex-col glass-strong shrink-0 hidden md:flex">
+        <div className="w-60 border-r border-border flex flex-col glass-strong shrink-0 hidden md:flex h-full">
           <div className="flex items-center gap-2 p-4 border-b border-border">
             <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-secondary transition-colors">
               <ArrowLeft className="w-4 h-4" />
@@ -554,7 +554,7 @@ contract Marketplace is ERC1155, Ownable {
           </div>
         </div>
 
-        <div className="flex-1 relative" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
+        <div className="flex-1 relative min-h-0 h-full" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -564,6 +564,7 @@ contract Marketplace is ERC1155, Ownable {
             nodeTypes={nodeTypes}
             fitView
             className="bg-background"
+            style={{ height: "100%", width: "100%" }}
           >
             <Background color="hsl(220, 15%, 12%)" gap={20} size={1} />
             <Controls />
