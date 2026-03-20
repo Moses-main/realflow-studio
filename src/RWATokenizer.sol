@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 
 /**
@@ -193,5 +194,75 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         bytes4 interfaceId
     ) public view override(ERC1155, IERC165) returns (bool) {
         return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    // EIP-2612 style permit for operator approvals
+    bytes32 private constant PERMIT_TYPEHASH = keccak256(
+        "Permit(address owner,address operator,uint256 nonce,uint256 deadline)"
+    );
+
+    mapping(address => uint256) private _nonces;
+
+    /**
+     * @notice Permit an operator using a signature (gasless approval)
+     * @param owner Address of the token owner
+     * @param operator Address to approve as operator
+     * @param deadline Expiration timestamp for the signature
+     * @param v Recovery byte
+     * @param r First part of signature
+     * @param s Second part of signature
+     */
+    function permit(
+        address owner,
+        address operator,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        require(block.timestamp <= deadline, "Permit expired");
+        
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, operator, _nonces[owner]++, deadline)
+        );
+        bytes32 hash = _hashTypedDataV4(structHash);
+        address signer = ECDSA.recover(hash, v, r, s);
+        
+        require(signer == owner, "Invalid signature");
+        
+        _setApprovalForAll(owner, operator, true);
+    }
+
+    /**
+     * @notice Get the current nonce for an owner
+     * @param owner Address to check
+     * @return Current nonce
+     */
+    function nonces(address owner) external view returns (uint256) {
+        return _nonces[owner];
+    }
+
+    /**
+     * @dev Hash typed data according to EIP-712
+     */
+    function _hashTypedDataV4(bytes32 structHash) internal view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked("\x19\x01", _domainSeparator(), structHash)
+        );
+    }
+
+    /**
+     * @dev EIP-712 domain separator
+     */
+    function _domainSeparator() internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("RealFlow RWATokenizer")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 }
