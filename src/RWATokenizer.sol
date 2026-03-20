@@ -8,25 +8,44 @@ import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
 /**
  * @title RWATokenizer
- * @dev A contract for tokenizing Real-World Assets (RWAs) using ERC-1155 standard.
- *      Supports fractional ownership, metadata storage via IPFS, and ERC-2981 royalties.
+ * @author RealFlow Studio
+ * @notice A contract for tokenizing Real-World Assets (RWAs) using ERC-1155 standard.
+ *         Supports fractional ownership, metadata storage via IPFS, and ERC-2981 royalties.
+ * @dev This contract enables:
+ *      - Tokenization of real-world assets into ERC-1155 tokens
+ *      - Fractional ownership through multi-amount minting
+ *      - IPFS-based metadata storage
+ *      - NFT royalties via ERC-2981 standard
  */
 contract RWATokenizer is ERC1155, Ownable, IERC2981 {
+    /**
+     * @notice Royalty information structure
+     * @member recipient Address receiving royalties
+     * @member royaltyFraction Royalty amount in basis points (e.g., 250 = 2.5%)
+     */
     struct RoyaltyInfo {
         address recipient;
         uint96 royaltyFraction;
     }
 
+    /**
+     * @notice Constructor initializes the contract with base URI and owner
+     * @param baseURI Base URI for token metadata (typically IPFS gateway)
+     * @param initialOwner Initial owner of the contract
+     */
     constructor(string memory baseURI, address initialOwner) ERC1155(baseURI) Ownable(initialOwner) {
         _defaultRoyaltyRecipient = initialOwner;
     }
 
-
-
+    /**
+     * @notice Error thrown when unauthorized access is attempted
+     * @param caller Address that attempted the unauthorized action
+     */
     error UnauthorizedAccess(address caller);
 
-
-    // Mapping to store metadata URIs for each token ID
+    /**
+     * @notice Maps token IDs to their IPFS metadata URIs
+     */
     mapping(uint256 => string) private _tokenURIs;
 
     // Royalty info: token ID => (recipient, royalty percentage in basis points)
