@@ -28,7 +28,7 @@ export function useAuth() {
     }
   }, [ready]);
 
-  const walletType = isConnected
+  const walletType: "injected" | "walletconnect" | "privy" | null = isConnected
     ? connector?.id === "injected" || connector?.id === "metaMask"
       ? "injected"
       : connector?.id === "walletConnect" || connector?.id === "walletConnectConnector"
@@ -37,9 +37,9 @@ export function useAuth() {
     : null;
 
   const authUser: AuthUser = {
-    address: address || null,
-    ensName: ensName || null,
-    ensAvatar: ensAvatar || null,
+    address: address ?? null,
+    ensName: ensName ?? null,
+    ensAvatar: ensAvatar ?? null,
     isAuthenticated: authenticated || isConnected,
     isWalletConnected: isConnected,
     walletType,
