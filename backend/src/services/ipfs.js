@@ -83,7 +83,7 @@ export async function uploadToIPFS({ name, description, image, properties, asset
       if (error.message?.includes('timed out') || error.name === 'TimeoutError') {
         reject(new Error('IPFS upload request timed out'));
       } else {
-        reject(new Error('Failed to upload to IPFS'));
+        reject(new Error(`Failed to upload to IPFS: ${error.message}`));
       }
     }
   });
@@ -111,7 +111,7 @@ export async function getFromIPFS(cid, timeoutMs = 30000) {
       if (error.message?.includes('timed out') || error.name === 'TimeoutError') {
         reject(new Error('IPFS fetch request timed out'));
       } else {
-        reject(new Error('Failed to fetch from IPFS'));
+        reject(new Error(`Failed to fetch from IPFS: ${error.message}`));
       }
     }
   });
@@ -149,7 +149,7 @@ export async function pinMetadata(cid) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Pinata API error: ${response.status} ${response.statusText}${errorData.message ? ` - ${errorData.message}` : ''}`);
     }
 
     const data = await response.json();
