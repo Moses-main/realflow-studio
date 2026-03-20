@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
+import { useSwitchNetwork } from "wagmi";
 import {
   Blocks, Plus, TrendingUp, Package, Users, DollarSign,
-  ArrowRight, BarChart3, Settings, Wallet, Globe, Menu, X, LogOut, Eye, Building2, Check, Sun, Moon
+  ArrowRight, BarChart3, Settings, Wallet, Globe, Menu, X, LogOut, Eye, Building2, Check, Sun, Moon, ChevronDown, Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -65,6 +66,9 @@ const Dashboard = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { theme, setTheme } = useTheme();
+  const { switchNetwork, chains } = useSwitchNetwork();
+  const [networkMenuOpen, setNetworkMenuOpen] = useState(false);
+  const networkName = "Polygon Amoy";
 
   return (
     <div className="min-h-screen bg-background">
@@ -241,6 +245,46 @@ const Dashboard = () => {
                 <Moon className="w-4 h-4" />
               )}
             </button>
+
+            {user.isWalletConnected && switchNetwork && (
+              <div className="relative">
+                <button
+                  onClick={() => setNetworkMenuOpen(!networkMenuOpen)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-secondary transition-colors text-sm"
+                >
+                  <Activity className="w-3.5 h-3.5 text-primary" />
+                  <span className="hidden sm:inline">{networkName}</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+                <AnimatePresence>
+                  {networkMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-border bg-background shadow-lg overflow-hidden"
+                    >
+                      {chains.map((chain) => (
+                        <button
+                          key={chain.id}
+                          onClick={() => {
+                            switchNetwork(chain.id);
+                            setNetworkMenuOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-sm text-left hover:bg-secondary transition-colors flex items-center justify-between ${
+                            chain.id === 80002 ? "text-primary" : ""
+                          }`}
+                        >
+                          <span>{chain.name}</span>
+                          {chain.id === 80002 && <Check className="w-4 h-4" />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
             {user.isWalletConnected ? (
               <Button variant="outline" size="sm" className="gap-2">
                 <Wallet className="w-4 h-4" />
