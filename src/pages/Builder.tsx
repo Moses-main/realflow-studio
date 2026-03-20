@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +68,7 @@ const Builder = () => {
   const [deploying, setDeploying] = useState(false);
   const [deployed, setDeployed] = useState(false);
   const [deployAddress, setDeployAddress] = useState("");
+  const [showPinningReminder, setShowPinningReminder] = useState(true);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -157,7 +158,8 @@ const Builder = () => {
     localStorage.setItem("marketplace-config", JSON.stringify(config));
     toast({
       title: "Saved!",
-      description: "Your marketplace design has been saved.",
+      description: "Your marketplace design has been saved. Don't forget to pin your data to IPFS to ensure persistence!",
+      duration: 8000,
     });
   };
 
@@ -300,6 +302,39 @@ const Builder = () => {
                 >
                   View on Amoy Explorer
                 </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showPinningReminder && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="absolute top-4 right-16 z-10 glass rounded-lg px-4 py-3 flex items-center gap-3 max-w-sm"
+              >
+                <Pin className="w-4 h-4 text-accent shrink-0" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">Pin your data to IPFS</div>
+                  <div className="text-xs text-muted-foreground">
+                    Ensure your marketplace data persists by pinning it to IPFS
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="shrink-0"
+                  onClick={() => window.open("https://app.pinata.cloud/", "_blank")}
+                >
+                  Pin via Pinata
+                </Button>
+                <button 
+                  onClick={() => setShowPinningReminder(false)}
+                  className="text-muted-foreground hover:text-foreground shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
