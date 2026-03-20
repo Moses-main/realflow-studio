@@ -619,16 +619,16 @@ contract Marketplace is ERC1155, Ownable {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 h-full w-[280px] glass-strong border-r border-border z-50 md:hidden flex flex-col"
+                className="fixed left-0 top-0 h-full w-[280px] glass-strong border-r border-[var(--border)] z-50 md:hidden flex flex-col"
               >
-                <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-secondary transition-colors">
+                    <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors">
                       <ArrowLeft className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                        <Blocks className="w-3 h-3 text-primary-foreground" />
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
+                        <Blocks className="w-3 h-3 text-white" />
                       </div>
                       <span className="font-semibold text-sm">Builder</span>
                     </div>
@@ -671,7 +671,7 @@ contract Marketplace is ERC1155, Ownable {
                     </button>
                   </div>
                 </div>
-                <div className="p-4 border-t border-border space-y-2">
+          <div className="p-4 border-t border-[var(--border)] space-y-2">
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleSave}>
                       <Save className="w-3 h-3" /> Save
@@ -717,14 +717,14 @@ contract Marketplace is ERC1155, Ownable {
         </AnimatePresence>
 
         {/* Desktop sidebar */}
-        <div className="w-60 border-r border-border flex flex-col glass-strong shrink-0 hidden md:flex h-full">
-          <div className="flex items-center gap-2 p-4 border-b border-border">
-            <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-secondary transition-colors">
+        <div className="w-60 border-r border-[var(--border)] flex flex-col glass-strong shrink-0 hidden md:flex h-full">
+          <div className="flex items-center gap-2 p-4 border-b border-[var(--border)]">
+            <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <Blocks className="w-3 h-3 text-primary-foreground" />
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
+                <Blocks className="w-3 h-3 text-white" />
               </div>
               <span className="font-semibold text-sm">Builder</span>
             </div>
@@ -817,7 +817,7 @@ contract Marketplace is ERC1155, Ownable {
             <button
               onClick={undo}
               disabled={historyIndex <= 0}
-              className="p-2 glass rounded-lg hover:border-primary/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 glass rounded-lg hover:border-[var(--primary)]/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               title="Undo (Cmd+Z)"
             >
               <Undo2 className="w-4 h-4" />
@@ -825,7 +825,7 @@ contract Marketplace is ERC1155, Ownable {
             <button
               onClick={redo}
               disabled={historyIndex >= history.length - 1}
-              className="p-2 glass rounded-lg hover:border-primary/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 glass rounded-lg hover:border-[var(--primary)]/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               title="Redo (Cmd+Shift+Z)"
             >
               <Redo2 className="w-4 h-4" />
@@ -840,12 +840,29 @@ contract Marketplace is ERC1155, Ownable {
             onConnect={onConnect}
             nodeTypes={nodeTypes}
             fitView
-            className="bg-background"
+            className="bg-[var(--canvas-bg)]"
             style={{ height: "100%", width: "100%" }}
           >
-            <Background color="hsl(220, 15%, 12%)" gap={20} size={1} />
-            <Controls />
-            <MiniMap />
+            <Background color="var(--canvas-dot)" gap={24} size={1} />
+            <Controls 
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+              }}
+              showInteractive={false}
+            />
+            <MiniMap 
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+              }}
+              nodeColor="var(--primary)"
+              maskColor="rgba(0, 0, 0, 0.6)"
+            />
           </ReactFlow>
 
           <AnimatePresence>
@@ -935,9 +952,9 @@ contract Marketplace is ERC1155, Ownable {
             )}
           </AnimatePresence>
 
-          <button
+            <button
             onClick={() => setAiOpen(!aiOpen)}
-            className="absolute top-4 right-4 z-10 p-2 glass rounded-lg hover:border-primary/40 transition-colors"
+            className="absolute top-4 right-4 z-10 p-2 glass rounded-lg hover:border-[var(--primary)]/40 transition-colors"
           >
             {aiOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
           </button>
@@ -971,10 +988,10 @@ contract Marketplace is ERC1155, Ownable {
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed right-0 top-0 h-screen w-[320px] md:w-80 lg:w-96 border-l border-border glass-strong overflow-hidden shrink-0 z-50 md:relative md:translate-x-0 md:h-full"
+                className="fixed right-0 top-0 h-screen w-[320px] md:w-80 lg:w-96 border-l border-[var(--border)] glass-strong overflow-hidden shrink-0 z-50 md:relative md:translate-x-0 md:h-full"
               >
               <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] shrink-0">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCreativeMode(false)}
