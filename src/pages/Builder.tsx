@@ -71,6 +71,9 @@ const Builder = () => {
   const [showPinningReminder, setShowPinningReminder] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showDeployConfirm, setShowDeployConfirm] = useState(false);
+  const [gasEstimate, setGasEstimate] = useState<string | null>(null);
+  const [estimatingGas, setEstimatingGas] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -108,17 +111,48 @@ const Builder = () => {
     [setNodes]
   );
 
-  const handleDeploy = async () => {
+  const estimateGas = async () => {
+    setEstimatingGas(true);
+    try {
+      const response = await fetch(`${API_URL}/api/web3/estimate-deployment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          contractType: "marketplace",
+          nodes: nodes.map(n => n.data.componentType),
+          deployer: user.address
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGasEstimate(data.estimatedGas || "~0.02 MATIC");
+      } else {
+        setGasEstimate("~0.02 MATIC (estimated)");
+      }
+    } catch {
+      setGasEstimate("~0.02 MATIC (estimated)");
+    } finally {
+      setEstimatingGas(false);
+    }
+  };
+
+  const handleDeployClick = () => {
     if (!user.isWalletConnected || !user.address) {
       toast({
         title: "Wallet not connected",
         description: "Please connect your wallet to deploy.",
         variant: "destructive",
       });
-      await connectWallet();
+      connectWallet();
       return;
     }
+    estimateGas();
+    setShowDeployConfirm(true);
+  };
 
+  const handleConfirmDeploy = async () => {
+    setShowDeployConfirm(false);
     setDeploying(true);
 
     try {
@@ -143,7 +177,7 @@ const Builder = () => {
       } else {
         throw new Error("Deployment failed");
       }
-    } catch (error) {
+    } catch {
       setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
       setDeployed(true);
       toast({
@@ -415,7 +449,7 @@ contract Marketplace is ERC1155, Ownable {
             </Button>
             <Button
               className="w-full gap-2"
-              onClick={handleDeploy}
+              onClick={handleDeployClick}
               disabled={deploying || deployed}
             >
               {deploying ? (
@@ -618,6 +652,81 @@ contract Marketplace is ERC1155, Ownable {
                 >
                   Cancel
                 </Button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showDeployConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowDeployConfirm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="glass-strong rounded-xl max-w-sm w-full p-6 border border-border"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold mb-2">Deploy Marketplace</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Ready to deploy your marketplace to Polygon Amoy testnet?
+                </p>
+                <div className="bg-secondary rounded-lg p-3 mb-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Components</span>
+                    <span>{nodes.length} blocks</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Network</span>
+                    <span>Polygon Amoy</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Est. Gas</span>
+                    <span>
+                      {estimatingGas ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Estimating...
+                        </span>
+                      ) : gasEstimate ? (
+                        gasEstimate
+                      ) : (
+                        "~0.02 MATIC"
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowDeployConfirm(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={handleConfirmDeploy}
+                    disabled={estimatingGas}
+                  >
+                    {estimatingGas ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Estimating...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="w-4 h-4" />
+                        Deploy
+                      </>
+                    )}
+                  </Button>
+                </div>
               </motion.div>
             </motion.div>
           )}
