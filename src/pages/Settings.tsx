@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Bell, Shield, Palette,
-  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock, BadgeCheck
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock, BadgeCheck, FlaskConical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ const mockTransactions: Transaction[] = [
 ];
 
 const STORAGE_KEY = "realflow-user-profile";
+const MOCK_MODE_KEY = "realflow-mock-mode";
 
 const Settings = () => {
   const { user, connectWallet, disconnectWallet } = useAuth();
@@ -69,6 +70,14 @@ const Settings = () => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [mockMode, setMockMode] = useState(() => {
+    const saved = localStorage.getItem(MOCK_MODE_KEY);
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(MOCK_MODE_KEY, String(mockMode));
+  }, [mockMode]);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -228,9 +237,47 @@ const Settings = () => {
                   </Button>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            <TabsContent value="wallet" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Developer Options</CardTitle>
+                  <CardDescription>Options for testing and development</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${mockMode ? "bg-amber-500/10" : "bg-muted"}`}>
+                        <FlaskConical className={`w-5 h-5 ${mockMode ? "text-amber-500" : "text-muted-foreground"}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium">Mock Data Mode</p>
+                        <p className="text-sm text-muted-foreground">Use simulated data instead of live blockchain</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={mockMode}
+                      onCheckedChange={(checked) => {
+                        setMockMode(checked);
+                        toast({
+                          title: checked ? "Mock Mode Enabled" : "Mock Mode Disabled",
+                          description: checked 
+                            ? "App will use simulated data for testing" 
+                            : "App will connect to live blockchain",
+                        });
+                      }}
+                    />
+                  </div>
+                  {mockMode && (
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <p className="text-sm text-amber-500 font-medium mb-1">Mock Mode Active</p>
+                      <p className="text-xs text-amber-500/80">
+                        All marketplace data, transactions, and wallet balances are simulated for testing purposes.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Connected Wallet</CardTitle>
