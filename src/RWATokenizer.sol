@@ -16,6 +16,7 @@ import "@openzeppelin/contracts/interfaces/IERC2981.sol";
  *      - Fractional ownership through multi-amount minting
  *      - IPFS-based metadata storage
  *      - NFT royalties via ERC-2981 standard
+ *      - Clone pattern support via initialize() function
  */
 contract RWATokenizer is ERC1155, Ownable, IERC2981 {
     /**
@@ -28,12 +29,29 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         uint96 royaltyFraction;
     }
 
+    /// @notice Flag to track if contract has been initialized (for clones)
+    bool public initialized;
+
     /**
-     * @notice Constructor initializes the contract with base URI and owner
+     * @notice Initializer for factory-deployed clones
+     * @dev Can only be called once, mimics constructor for proxy pattern
      * @param baseURI Base URI for token metadata (typically IPFS gateway)
      * @param initialOwner Initial owner of the contract
      */
+    function initialize(string memory baseURI, address initialOwner) public {
+        require(!initialized, "Already initialized");
+        initialized = true;
+        _setURI(baseURI);
+        _transferOwnership(initialOwner);
+        _defaultRoyaltyRecipient = initialOwner;
+    }
+
+    /**
+     * @notice Fallback constructor for direct deployments
+     * @dev Skips initialization when called directly
+     */
     constructor(string memory baseURI, address initialOwner) ERC1155(baseURI) Ownable(initialOwner) {
+        initialized = true;
         _defaultRoyaltyRecipient = initialOwner;
     }
 
