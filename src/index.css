@@ -340,6 +340,26 @@
   font-family: Inter, system-ui, sans-serif;
 }
 
+/* Glass effect for dark theme */
+.glass {
+  @apply bg-[var(--surface)]/80 backdrop-blur-md border border-[var(--border)];
+}
+
+.glass-strong {
+  @apply bg-[var(--surface-elevated)] backdrop-blur-xl border border-[var(--border)];
+}
+
+/* Node glow effect */
+.node-glow {
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.node-glow:hover {
+  box-shadow: 0 0 20px -5px var(--primary);
+  border-color: var(--primary);
+}
+
 /* Edge styles */
 .react-flow__edge-path {
   stroke: var(--border-strong);
