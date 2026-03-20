@@ -16,7 +16,19 @@ import NotFound from "./pages/NotFound";
 import { Search, Command } from "lucide-react";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 const CommandPalette = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const navigate = useNavigate();
