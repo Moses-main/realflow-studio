@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -86,6 +86,7 @@ const Builder = () => {
   const [githubRepo, setGithubRepo] = useState("realflow-marketplace");
   const [githubUsername, setGithubUsername] = useState("");
   const [exportingToGithub, setExportingToGithub] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -661,6 +662,9 @@ contract Marketplace is ERC1155, Ownable {
               <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => setShowExportDialog(true)}>
                 <Download className="w-3 h-3" /> Export
               </Button>
+              <Button size="sm" variant="outline" className="gap-1 px-2" onClick={() => setShowPreview(true)} title="Preview">
+                <Eye className="w-3 h-3" />
+              </Button>
             </div>
             <Button
               size="sm"
@@ -1097,6 +1101,170 @@ contract Marketplace is ERC1155, Ownable {
                         Deploy
                       </>
                     )}
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showPreview && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+              onClick={() => setShowPreview(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-background rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-border flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Eye className="w-5 h-5" />
+                    Marketplace Preview
+                  </h2>
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto p-6 bg-secondary/30">
+                  <div className="space-y-6 max-w-3xl mx-auto">
+                    <div className="text-center mb-8">
+                      <h1 className="text-3xl font-bold mb-2">RealFlow Marketplace</h1>
+                      <p className="text-muted-foreground">Discover and trade digital assets on Polygon Amoy</p>
+                    </div>
+
+                    {nodes.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Blocks className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No components added yet. Add components to see preview.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {nodes.map((node) => {
+                            const type = node.data.componentType as string;
+                            return (
+                              <div key={node.id} className="bg-background rounded-lg p-4 border border-border">
+                                {type === "assetUpload" && (
+                                  <>
+                                    <div className="aspect-video bg-secondary rounded-lg mb-3 flex items-center justify-center">
+                                      <div className="text-center text-muted-foreground">
+                                        <div className="text-4xl mb-2">+</div>
+                                        <div className="text-sm">Drop file here</div>
+                                      </div>
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">Upload digital assets</p>
+                                  </>
+                                )}
+                                {type === "mintButton" && (
+                                  <>
+                                    <div className="flex items-center justify-center h-20 bg-secondary rounded-lg mb-3">
+                                      <span className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium">
+                                        Mint NFT
+                                      </span>
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">Create new tokens</p>
+                                  </>
+                                )}
+                                {type === "listingGrid" && (
+                                  <>
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                      {[1, 2, 3, 4].map((i) => (
+                                        <div key={i} className="aspect-square bg-secondary rounded-lg" />
+                                      ))}
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">Browse listings</p>
+                                  </>
+                                )}
+                                {type === "searchBar" && (
+                                  <>
+                                    <div className="h-10 bg-secondary rounded-lg mb-3 flex items-center px-3">
+                                      <span className="text-muted-foreground text-sm">Search assets...</span>
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">Find specific items</p>
+                                  </>
+                                )}
+                                {type === "filterPanel" && (
+                                  <>
+                                    <div className="space-y-2 mb-3">
+                                      <div className="h-4 bg-secondary rounded w-3/4" />
+                                      <div className="h-4 bg-secondary rounded w-1/2" />
+                                      <div className="h-4 bg-secondary rounded w-2/3" />
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">Filter by category</p>
+                                  </>
+                                )}
+                                {type === "userProfile" && (
+                                  <>
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <div className="w-12 h-12 bg-secondary rounded-full" />
+                                      <div>
+                                        <div className="h-4 bg-secondary rounded w-20 mb-1" />
+                                        <div className="h-3 bg-secondary rounded w-16" />
+                                      </div>
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">User info & stats</p>
+                                  </>
+                                )}
+                                {!["assetUpload", "mintButton", "listingGrid", "searchBar", "filterPanel", "userProfile"].includes(type) && (
+                                  <>
+                                    <div className="h-20 bg-secondary rounded-lg mb-3 flex items-center justify-center">
+                                      <Blocks className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="font-medium">{node.data.label}</h3>
+                                    <p className="text-xs text-muted-foreground">{node.data.category}</p>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="bg-background rounded-lg p-4 border border-border">
+                          <h3 className="font-medium mb-3">Flow Preview</h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {nodes.map((node, idx) => (
+                              <React.Fragment key={node.id}>
+                                <div className="px-3 py-1.5 bg-secondary rounded-lg text-sm">
+                                  {node.data.label}
+                                </div>
+                                {idx < nodes.length - 1 && (
+                                  <span className="text-muted-foreground">→</span>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 border-t border-border flex justify-between">
+                  <Button variant="outline" onClick={() => setShowPreview(false)}>
+                    Close Preview
+                  </Button>
+                  <Button onClick={() => {
+                    setShowPreview(false);
+                    setShowDeployConfirm(true);
+                  }}>
+                    <Rocket className="w-4 h-4 mr-2" />
+                    Deploy This
                   </Button>
                 </div>
               </motion.div>
