@@ -240,7 +240,7 @@ const Explore = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
-                        {Math.floor(Math.random() * 500) + 100}
+                        {Math.floor(parseInt(marketplace.id) * 137.5) + 100}
                       </span>
                     </div>
 
