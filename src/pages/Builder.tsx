@@ -76,6 +76,9 @@ const Builder = () => {
   const [estimatingGas, setEstimatingGas] = useState(false);
   const [txStatus, setTxStatus] = useState<"pending" | "success" | "failed" | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -227,13 +230,35 @@ const Builder = () => {
     return () => clearInterval(interval);
   }, [txHash, txStatus]);
 
+  useEffect(() => {
+    if (!autoSaveEnabled) return;
+
+    const autoSaveInterval = setInterval(() => {
+      const config = { nodes, edges };
+      localStorage.setItem("marketplace-config", JSON.stringify(config));
+      setLastSaved(new Date());
+    }, 30000);
+
+    return () => clearInterval(autoSaveInterval);
+  }, [nodes, edges, autoSaveEnabled]);
+
+  useEffect(() => {
+    if (lastSaved) {
+      const timeout = setTimeout(() => {
+        setIsSaving(false);
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [lastSaved]);
+
   const handleSave = () => {
+    setIsSaving(true);
     const config = { nodes, edges };
     localStorage.setItem("marketplace-config", JSON.stringify(config));
+    setLastSaved(new Date());
     toast({
       title: "Saved!",
-      description: "Your marketplace design has been saved. Don't forget to pin your data to IPFS to ensure persistence!",
-      duration: 8000,
+      description: "Your marketplace design has been saved.",
     });
   };
 
@@ -400,6 +425,25 @@ contract Marketplace is ERC1155, Ownable {
                     <span className="text-xs text-primary">{nodes.length} added</span>
                   </div>
                   <ComponentPalette onDragStart={(item) => { draggedItem.current = item; }} />
+                </div>
+                <div className="px-4 py-2 border-t border-border">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      {isSaving ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
+                      ) : lastSaved ? (
+                        <><Check className="w-3 h-3 text-primary" /> Auto-saved</>
+                      ) : (
+                        <><Save className="w-3 h-3" /> Auto-save on</>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+                      className={`text-xs ${autoSaveEnabled ? "text-primary" : "text-muted-foreground"} hover:underline`}
+                    >
+                      {autoSaveEnabled ? "On" : "Off"}
+                    </button>
+                  </div>
                 </div>
                 <div className="p-4 border-t border-border space-y-2">
                   <div className="flex gap-2">
