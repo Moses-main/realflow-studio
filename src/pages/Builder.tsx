@@ -89,6 +89,7 @@ const Builder = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified" | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -325,6 +326,43 @@ const Builder = () => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const verifyContract = async () => {
+    if (!deployAddress) {
+      toast({
+        title: "No contract",
+        description: "Deploy a contract first before verifying.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerificationStatus("pending");
+    try {
+      const response = await fetch(`${API_URL}/api/web3/verify-contract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: deployAddress }),
+      });
+
+      if (response.ok) {
+        setVerificationStatus("verified");
+        toast({
+          title: "Contract Verified!",
+          description: "Your contract has been verified on Polygonscan.",
+        });
+      } else {
+        throw new Error("Verification failed");
+      }
+    } catch (error) {
+      setVerificationStatus("unverified");
+      toast({
+        title: "Verification Failed",
+        description: "Could not verify contract. Try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -786,14 +824,29 @@ contract Marketplace is ERC1155, Ownable {
                     {deployAddress.slice(0, 10)}... on Polygon Amoy
                   </div>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="shrink-0"
-                  onClick={() => window.open(`https://amoy.polygonscan.com/address/${deployAddress}`, "_blank")}
-                >
-                  View on Explorer
-                </Button>
+                <div className="flex gap-2 shrink-0">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => window.open(`https://amoy.polygonscan.com/address/${deployAddress}`, "_blank")}
+                  >
+                    View on Explorer
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={verificationStatus === "verified" ? "default" : "outline"}
+                    onClick={verifyContract}
+                    disabled={verificationStatus === "pending"}
+                  >
+                    {verificationStatus === "pending" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : verificationStatus === "verified" ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      "Verify"
+                    )}
+                  </Button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
