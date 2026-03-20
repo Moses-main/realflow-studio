@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Bell, Shield, Palette,
-  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock, BadgeCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -357,7 +357,13 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>RWATokenizer Address</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>RWATokenizer Address</Label>
+                      <span className="flex items-center gap-1 text-xs text-primary">
+                        <BadgeCheck className="w-4 h-4" />
+                        Verified
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <Input 
                         value="0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be" 
@@ -367,10 +373,19 @@ const Settings = () => {
                       <Button variant="outline" onClick={copyAddress}>
                         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </Button>
+                      <Button variant="outline" onClick={() => window.open("https://amoy.polygonscan.com/address/0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be#contracts", "_blank")}>
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>MarketplaceFactory Address</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>MarketplaceFactory Address</Label>
+                      <span className="flex items-center gap-1 text-xs text-primary">
+                        <BadgeCheck className="w-4 h-4" />
+                        Verified
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <Input 
                         value="0x802A6843516f52144b3F1D04E5447A085d34aF37" 
@@ -379,6 +394,9 @@ const Settings = () => {
                       />
                       <Button variant="outline" onClick={copyAddress}>
                         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="outline" onClick={() => window.open("https://amoy.polygonscan.com/address/0x802A6843516f52144b3F1D04E5447A085d34aF37#contracts", "_blank")}>
+                        <ExternalLink className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
