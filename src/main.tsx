@@ -5,14 +5,42 @@ import "./index.css";
 
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
-import { mainnet, polygon, polygonMumbai } from "wagmi/chains";
+import { mainnet, polygon } from "wagmi/chains";
 import { InjectedConnector } from "wagmi/connectors/injected";
 import { WalletConnectConnector } from "@wagmi/connectors/walletConnect";
 import { PrivyProvider } from "@privy-io/react-auth";
+import { Chain } from "wagmi";
+
+const polygonAmoy: Chain = {
+  id: 80002,
+  name: "Polygon Amoy",
+  network: "polygon-amoy",
+  nativeCurrency: {
+    decimals: 18,
+    name: "MATIC",
+    symbol: "MATIC",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rpc-amoy.polygon.technology/"],
+    },
+    public: {
+      http: ["https://rpc-amoy.polygon.technology/"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "PolygonScan",
+      url: "https://amoy.polygonscan.com",
+    },
+  },
+  testnet: true,
+};
 
 interface ImportMetaEnv {
   readonly VITE_PRIVY_APP_ID?: string;
   readonly VITE_WALLET_CONNECT_PROJECT_ID?: string;
+  readonly VITE_API_URL?: string;
 }
 
 interface ImportMeta {
@@ -30,7 +58,7 @@ const PRIVY_APP_ID = (
 ).toString();
 
 const { chains, publicClient } = configureChains(
-  [polygonMumbai, polygon, mainnet],
+  [polygonAmoy, polygon, mainnet],
   [publicProvider()]
 );
 
