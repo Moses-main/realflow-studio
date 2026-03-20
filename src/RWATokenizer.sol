@@ -101,6 +101,12 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
     // Event emitted when a new token is minted
     event TokenMinted(address indexed to, uint256 indexed tokenId, uint256 amount, string metadataURI);
 
+    // Event emitted when tokens are transferred
+    event TokenTransferred(address indexed from, address indexed to, uint256 indexed tokenId, uint256 amount);
+
+    // Event emitted when token URI is set
+    event TokenURISet(uint256 indexed tokenId, string metadataURI);
+
     /**
      * @dev Constructor to initialize the base URI for the contract.
      * @param baseURI The base URI for metadata.
@@ -139,6 +145,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      */
     function _setTokenURI(uint256 tokenId, string memory metadataURI) internal {
         _tokenURIs[tokenId] = metadataURI;
+        emit TokenURISet(tokenId, metadataURI);
     }
 
     /**
@@ -405,5 +412,24 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         _setTokenURI(tokenId, metadataURI);
 
         emit TokenMinted(to, tokenId, amount, metadataURI);
+    }
+
+    /**
+     * @dev Hook called after any token transfer (including mint and burn)
+     * @param from Source address (address(0) for mint)
+     * @param to Destination address (address(0) for burn)
+     * @param tokenId Token ID transferred
+     * @param amount Amount transferred
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 amount
+    ) internal virtual {
+        // Emit custom transfer event (skip for mint - already has TokenMinted)
+        if (from != address(0) && to != address(0)) {
+            emit TokenTransferred(from, to, tokenId, amount);
+        }
     }
 }
