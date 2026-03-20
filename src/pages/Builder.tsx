@@ -307,15 +307,25 @@ const Builder = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    const config = { nodes, edges };
-    localStorage.setItem("marketplace-config", JSON.stringify(config));
-    setLastSaved(new Date());
-    toast({
-      title: "Saved!",
-      description: "Your marketplace design has been saved.",
-    });
+    try {
+      const config = { nodes, edges };
+      localStorage.setItem("marketplace-config", JSON.stringify(config));
+      setLastSaved(new Date());
+      toast({
+        title: "Saved!",
+        description: "Your marketplace design has been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: "Failed to save marketplace design.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const generateSolidityCode = () => {
