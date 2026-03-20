@@ -107,6 +107,18 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
     // Event emitted when token URI is set
     event TokenURISet(uint256 indexed tokenId, string metadataURI);
 
+    // Event emitted when token royalty is set
+    event TokenRoyaltySet(uint256 indexed tokenId, address indexed recipient, uint96 royaltyBasisPoints);
+
+    // Event emitted when default royalty is set
+    event DefaultRoyaltySet(address indexed recipient, uint96 royaltyBasisPoints);
+
+    // Event emitted when implementation is updated
+    event ImplementationUpdated(address indexed oldImpl, address indexed newImpl);
+
+    // Event emitted when deployment fee is updated
+    event DeploymentFeeUpdated(uint256 oldFee, uint256 newFee);
+
     /**
      * @dev Constructor to initialize the base URI for the contract.
      * @param baseURI The base URI for metadata.
@@ -161,6 +173,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
     ) external onlyOwner {
         require(royaltyBasisPoints <= 10000, "RWATokenizer: royalty exceeds max");
         _royaltyInfo[tokenId] = RoyaltyInfo(recipient, royaltyBasisPoints);
+        emit TokenRoyaltySet(tokenId, recipient, royaltyBasisPoints);
     }
 
     /**
@@ -172,6 +185,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         require(royaltyBasisPoints <= 10000, "RWATokenizer: royalty exceeds max");
         _defaultRoyaltyRecipient = recipient;
         _defaultRoyaltyBasisPoints = royaltyBasisPoints;
+        emit DefaultRoyaltySet(recipient, royaltyBasisPoints);
     }
 
     /**
