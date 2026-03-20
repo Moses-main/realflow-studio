@@ -12,6 +12,28 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const log = {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    };
+    if (res.statusCode >= 400) {
+      console.error('Request:', JSON.stringify(log));
+    } else {
+      console.log('Request:', JSON.stringify(log));
+    }
+  });
+  next();
+});
+
 // Validate required environment variables in production
 if (NODE_ENV === 'production') {
   const required = ['CORS_ORIGIN'];
