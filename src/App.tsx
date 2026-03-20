@@ -105,8 +105,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
-      <KeyboardShortcutsHandler />
       <BrowserRouter>
+        <KeyboardShortcutsHandler />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
