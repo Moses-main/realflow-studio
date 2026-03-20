@@ -3,9 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home, Package, BarChart3, Globe, Settings,
-  Menu, X, Blocks, Wallet, LogOut, User
+  Menu, X, Blocks, Wallet, LogOut
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
@@ -14,7 +13,7 @@ interface SidebarProps {
 
 const navItems = [
   { icon: Home, label: "Dashboard", path: "/dashboard" },
-  { icon: Package, label: "My Marketplaces", path: "/marketplaces" },
+  { icon: Package, label: "Marketplaces", path: "/marketplaces" },
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: Globe, label: "Explore", path: "/explore" },
   { icon: Settings, label: "Settings", path: "/settings" },
@@ -27,66 +26,69 @@ const Sidebar = ({ className = "" }: SidebarProps) => {
 
   const NavContent = () => (
     <>
-      <div className="flex items-center gap-2 p-5 border-b border-border">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-          <Blocks className="w-4 h-4 text-primary-foreground" />
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-4 py-5">
+        <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center">
+          <Blocks className="w-4 h-4 text-white" />
         </div>
-        <Link to="/dashboard" className="font-bold tracking-tight">RealFlow</Link>
+        <span className="font-semibold text-[var(--text-primary)]">RealFlow</span>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setMobileOpen(false)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive 
-                  ? "bg-primary/10 text-primary" 
-                  : "text-muted-foreground hover:bg-secondary"
-              }`}
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4">
+        <div className="text-overline px-3 mb-2">Menu</div>
+        <div className="space-y-0.5">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileOpen(false)}
+                className={isActive ? "sidebar-item-active" : "sidebar-item"}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
       </nav>
-      <div className="p-4 border-t border-border space-y-2">
+
+      {/* Wallet Section */}
+      <div className="px-3 py-4 border-t border-[var(--sidebar-border)]">
         {user.isWalletConnected ? (
-          <div className="glass rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs font-bold text-primary-foreground">
+          <div className="surface p-3">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-xs font-bold text-white">
                 {user.address ? `${user.address.slice(2,4)}` : "RF"}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">
-                  {user.address ? `${user.address.slice(0,6)}...${user.address.slice(-4)}` : "Not Connected"}
+                <div className="text-sm font-medium text-[var(--text-primary)] truncate">
+                  {user.address ? `${user.address.slice(0,6)}...${user.address.slice(-4)}` : "Connected"}
                 </div>
-                <div className="text-xs text-muted-foreground">Polygon Amoy</div>
+                <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                  <div className="status-dot-success" />
+                  Polygon Amoy
+                </div>
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full gap-2 text-destructive"
+            <button
               onClick={disconnectWallet}
+              className="w-full flex items-center justify-center gap-2 text-xs text-[var(--error)] hover:text-[var(--error)]/80 transition-colors py-1.5 rounded-lg hover:bg-[var(--error-muted)]"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3 h-3" />
               Disconnect
-            </Button>
+            </button>
           </div>
         ) : (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full gap-2"
+          <button
             onClick={connectWallet}
+            className="btn-primary w-full flex items-center justify-center gap-2 text-sm"
           >
             <Wallet className="w-4 h-4" />
             Connect Wallet
-          </Button>
+          </button>
         )}
       </div>
     </>
@@ -97,43 +99,47 @@ const Sidebar = ({ className = "" }: SidebarProps) => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 p-2 glass rounded-lg lg:hidden"
+        className="fixed top-3 left-3 z-50 p-2 surface hover:bg-[var(--surface-hover)] rounded-lg lg:hidden transition-colors"
       >
-        <Menu className="w-5 h-5" />
+        <Menu className="w-5 h-5 text-[var(--text-secondary)]" />
       </button>
 
       {/* Mobile Overlay */}
       <AnimatePresence>
         {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.aside
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed left-0 top-0 h-full w-[240px] bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] z-50 lg:hidden flex flex-col"
+          >
+            <button
               onClick={() => setMobileOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-full w-[280px] glass-strong border-r border-border z-50 flex flex-col lg:hidden"
+              className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)]"
             >
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="absolute top-4 right-4 p-1 hover:bg-secondary rounded"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <NavContent />
-            </motion.aside>
-          </>
+              <X className="w-4 h-4" />
+            </button>
+            <NavContent />
+          </motion.aside>
         )}
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:flex w-64 glass-strong border-r border-border z-40 flex-col shrink-0 fixed left-0 top-0 h-full ${className}`}>
+      <aside className={`hidden lg:flex lg:flex-col lg:fixed lg:left-0 lg:top-0 lg:h-full lg:w-[240px] bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] ${className}`}>
         <NavContent />
       </aside>
     </>
