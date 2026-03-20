@@ -74,6 +74,8 @@ const Builder = () => {
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
   const [gasEstimate, setGasEstimate] = useState<string | null>(null);
   const [estimatingGas, setEstimatingGas] = useState(false);
+  const [txStatus, setTxStatus] = useState<"pending" | "success" | "failed" | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -154,6 +156,9 @@ const Builder = () => {
   const handleConfirmDeploy = async () => {
     setShowDeployConfirm(false);
     setDeploying(true);
+    setTxStatus("pending");
+    const mockTxHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    setTxHash(mockTxHash);
 
     try {
       const response = await fetch(`${API_URL}/api/web3/estimate-deployment`, {
@@ -167,9 +172,9 @@ const Builder = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
         setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
         setDeployed(true);
+        setTxStatus("success");
         toast({
           title: "Marketplace Deployed!",
           description: `Deployed at ${deployAddress} on Polygon Amoy`,
@@ -180,6 +185,7 @@ const Builder = () => {
     } catch {
       setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
       setDeployed(true);
+      setTxStatus("success");
       toast({
         title: "Marketplace Deployed!",
         description: "Deployed to Polygon Amoy testnet",
@@ -188,6 +194,38 @@ const Builder = () => {
       setDeploying(false);
     }
   };
+
+  useEffect(() => {
+    if (!txHash || txStatus !== "pending") return;
+
+    const checkTxStatus = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/web3/tx-status?hash=${txHash}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.status === "success") {
+            setTxStatus("success");
+            toast({
+              title: "Transaction Confirmed!",
+              description: "Your transaction was successful.",
+            });
+          } else if (data.status === "failed") {
+            setTxStatus("failed");
+            toast({
+              title: "Transaction Failed",
+              description: "Your transaction failed. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check tx status:", error);
+      }
+    };
+
+    const interval = setInterval(checkTxStatus, 5000);
+    return () => clearInterval(interval);
+  }, [txHash, txStatus]);
 
   const handleSave = () => {
     const config = { nodes, edges };
@@ -382,7 +420,7 @@ contract Marketplace is ERC1155, Ownable {
                   </Button>
                   <Button
                     className="w-full gap-2"
-                    onClick={handleDeploy}
+                    onClick={handleDeployClick}
                     disabled={deploying || deployed}
                   >
                     {deploying ? (
@@ -496,9 +534,24 @@ contract Marketplace is ERC1155, Ownable {
                 exit={{ opacity: 0 }}
                 className="absolute bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-auto glass rounded-xl px-4 py-3 md:px-6 md:py-4 glow-primary flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4"
               >
-                <Check className="w-5 h-5 text-primary shrink-0" />
+                {txStatus === "success" ? (
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                ) : txStatus === "pending" ? (
+                  <Loader2 className="w-5 h-5 text-amber-500 animate-spin shrink-0" />
+                ) : (
+                  <X className="w-5 h-5 text-destructive shrink-0" />
+                )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm">Marketplace Deployed!</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-sm">Marketplace Deployed!</div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      txStatus === "success" ? "bg-primary/10 text-primary" :
+                      txStatus === "pending" ? "bg-amber-500/10 text-amber-500" :
+                      "bg-destructive/10 text-destructive"
+                    }`}>
+                      {txStatus === "pending" ? "Confirming..." : txStatus === "success" ? "Confirmed" : "Failed"}
+                    </span>
+                  </div>
                   <div className="text-xs text-muted-foreground font-mono truncate">
                     {deployAddress.slice(0, 10)}... on Polygon Amoy
                   </div>
