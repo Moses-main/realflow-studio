@@ -49,7 +49,7 @@ function resetIPFSClient() {
   clientCreationFailed = false;
 }
 
-export async function uploadToIPFS({ name, description, image, properties, assetType }) {
+export async function uploadToIPFS({ name, description, image, properties, assetType }, timeoutMs = 60000) {
   const client = getIPFSClient();
   
   const metadata = {
@@ -64,34 +64,57 @@ export async function uploadToIPFS({ name, description, image, properties, asset
     }
   };
 
-  try {
-    const { cid } = await client.add(JSON.stringify(metadata));
-    
-    return {
-      cid: cid.toString(),
-      url: `ipfs://${cid.toString()}`,
-      gatewayUrl: `https://${IPFS_GATEWAY}/ipfs/${cid.toString()}`
-    };
-  } catch (error) {
-    console.error('IPFS upload error:', error);
-    throw new Error('Failed to upload to IPFS');
-  }
+  return new Promise(async (resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error('IPFS upload request timed out'));
+    }, timeoutMs);
+
+    try {
+      const { cid } = await client.add(JSON.stringify(metadata));
+      clearTimeout(timeoutId);
+      resolve({
+        cid: cid.toString(),
+        url: `ipfs://${cid.toString()}`,
+        gatewayUrl: `https://${IPFS_GATEWAY}/ipfs/${cid.toString()}`
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('IPFS upload error:', error);
+      if (error.message?.includes('timed out') || error.name === 'TimeoutError') {
+        reject(new Error('IPFS upload request timed out'));
+      } else {
+        reject(new Error('Failed to upload to IPFS'));
+      }
+    }
+  });
 }
 
-export async function getFromIPFS(cid) {
+export async function getFromIPFS(cid, timeoutMs = 30000) {
   const client = getIPFSClient();
   
-  try {
-    const chunks = [];
-    for await (const chunk of client.cat(cid)) {
-      chunks.push(chunk);
+  return new Promise(async (resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error('IPFS fetch request timed out'));
+    }, timeoutMs);
+
+    try {
+      const chunks = [];
+      for await (const chunk of client.cat(cid)) {
+        chunks.push(chunk);
+      }
+      clearTimeout(timeoutId);
+      const data = Buffer.concat(chunks).toString();
+      resolve(JSON.parse(data));
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('IPFS fetch error:', error);
+      if (error.message?.includes('timed out') || error.name === 'TimeoutError') {
+        reject(new Error('IPFS fetch request timed out'));
+      } else {
+        reject(new Error('Failed to fetch from IPFS'));
+      }
     }
-    const data = Buffer.concat(chunks).toString();
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('IPFS fetch error:', error);
-    throw new Error('Failed to fetch from IPFS');
-  }
+  });
 }
 
 export async function pinMetadata(cid) {
