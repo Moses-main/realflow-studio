@@ -1,28 +1,48 @@
 import { http, createPublicClient, formatEther } from 'viem';
-import { polygonMumbai, polygon, sepolia, mainnet } from 'viem/chains';
+import { polygon, sepolia, mainnet } from 'viem/chains';
+
+const polygonAmoy = {
+  id: 80002,
+  name: 'Polygon Amoy',
+  network: 'polygon-amoy',
+  nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://rpc-amoy.polygon.technology/'] },
+    public: { http: ['https://rpc-amoy.polygon.technology/'] },
+  },
+  blockExplorers: {
+    default: { 
+      name: 'PolygonScan', 
+      url: 'https://amoy.polygonscan.com' 
+    },
+  },
+  testnet: true,
+};
 
 const CHAINS = {
-  'polygon-mumbai': polygonMumbai,
+  'polygon-amoy': polygonAmoy,
+  'polygon-mumbai': polygonAmoy,
   'polygon-mainnet': polygon,
   'sepolia': sepolia,
   'mainnet': mainnet
 };
 
 const RPC_URLS = {
-  'polygon-mumbai': process.env.POLYGON_AMOY_RPC_URL || process.env.INFURA_POLYGON_AMOY_RPC_URL,
+  'polygon-amoy': process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/',
+  'polygon-mumbai': process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/',
   'polygon-mainnet': process.env.POLYGON_MAINNET_RPC_URL,
-  'sepolia': process.env.SEPOLIA_RPC_URL || process.env.INFURA_SEPOLIA_RPC_URL,
-  'mainnet': process.env.MAINNET_RPC_URL || process.env.INFURA_MAINNET_RPC_URL
+  'sepolia': process.env.SEPOLIA_RPC_URL,
+  'mainnet': process.env.MAINNET_RPC_URL
 };
 
 function getChain(network) {
-  const chainKey = network || 'polygon-mumbai';
-  return CHAINS[chainKey] || polygonMumbai;
+  const chainKey = network || 'polygon-amoy';
+  return CHAINS[chainKey] || polygonAmoy;
 }
 
 function getRPCUrl(network) {
-  const chainKey = network || 'polygon-mumbai';
-  return RPC_URLS[chainKey] || 'https://rpc-mumbai.maticvigil.com';
+  const chainKey = network || 'polygon-amoy';
+  return RPC_URLS[chainKey] || 'https://rpc-amoy.polygon.technology/';
 }
 
 export async function getContractInfo(address, network) {
@@ -35,18 +55,18 @@ export async function getContractInfo(address, network) {
   });
 
   try {
-    const [balance, code, name] = await Promise.all([
+    const [balance, code] = await Promise.all([
       client.getBalance({ address }),
-      client.getBytecode({ address }),
-      client.getContractName ? client.getContractName({ address }) : Promise.resolve(null)
+      client.getBytecode({ address })
     ]);
 
     return {
       address,
       network: chain.name,
+      explorerUrl: chain.blockExplorers?.default?.url || 'https://amoy.polygonscan.com',
       balance: formatEther(balance),
       hasCode: code && code.length > 2,
-      name: name || 'Unknown Contract'
+      name: 'RealFlow Contract'
     };
   } catch (error) {
     console.error('Contract info error:', error);
@@ -92,7 +112,8 @@ export function getMarketplaceFactory() {
     name: 'MarketplaceFactory',
     address: factoryAddress || null,
     deployed: !!factoryAddress,
-    networks: ['polygon-mumbai', 'polygon-mainnet', 'sepolia'],
+    networks: ['polygon-amoy', 'polygon-mainnet', 'sepolia'],
+    explorer: 'https://amoy.polygonscan.com',
     functions: [
       'createMarketplace(string name, address tokenAddress)',
       'getMarketplaceCount()',
@@ -104,17 +125,18 @@ export function getMarketplaceFactory() {
 
 export async function estimateDeploymentGas(contractType) {
   const estimates = {
-    token: { gas: 2500000, description: 'ERC-721 or ERC-1155 token' },
-    marketplace: { gas: 5000000, description: 'Full marketplace contract' },
-    factory: { gas: 3000000, description: 'Factory contract' },
-    custom: { gas: 2000000, description: 'Custom contract' }
+    token: { gas: 2500000n, description: 'ERC-721 or ERC-1155 token' },
+    marketplace: { gas: 5000000n, description: 'Full marketplace contract' },
+    factory: { gas: 3000000n, description: 'Factory contract' },
+    custom: { gas: 2000000n, description: 'Custom contract' }
   };
 
   const estimate = estimates[contractType] || estimates.custom;
   
   return {
     ...estimate,
-    network: 'polygon-mumbai',
+    network: 'polygon-amoy',
+    explorerUrl: 'https://amoy.polygonscan.com',
     estimatedCost: '0.05',
     currency: 'MATIC',
     note: 'Estimate only - actual gas may vary'

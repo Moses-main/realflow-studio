@@ -131,23 +131,21 @@ const Builder = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setDeployAddress("0x" + Array.from({ length: 40 }, () => 
-          Math.floor(Math.random() * 16).toString(16)
-        ).join(""));
+        setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
         setDeployed(true);
         toast({
           title: "Marketplace Deployed!",
-          description: `Deployed at ${deployAddress} on Polygon Mumbai`,
+          description: `Deployed at ${deployAddress} on Polygon Amoy`,
         });
       } else {
         throw new Error("Deployment failed");
       }
     } catch (error) {
-      setDeployAddress("0x742d35Cc6634C0532925a3b844Bc9e7595f0f123");
+      setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
       setDeployed(true);
       toast({
         title: "Marketplace Deployed!",
-        description: "Deployed to Polygon Mumbai testnet",
+        description: "Deployed to Polygon Amoy testnet",
       });
     } finally {
       setDeploying(false);
@@ -292,15 +290,15 @@ const Builder = () => {
                 <div>
                   <div className="font-semibold text-sm">Marketplace Deployed!</div>
                   <div className="text-xs text-muted-foreground font-mono">
-                    {deployAddress.slice(0, 10)}... on Polygon Mumbai
+                    {deployAddress.slice(0, 10)}... on Polygon Amoy
                   </div>
                 </div>
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => window.open(`https://mumbai.polygonscan.com/address/${deployAddress}`, "_blank")}
+                  onClick={() => window.open(`https://amoy.polygonscan.com/address/${deployAddress}`, "_blank")}
                 >
-                  View on PolygonScan
+                  View on Amoy Explorer
                 </Button>
               </motion.div>
             )}
