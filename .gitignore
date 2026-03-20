@@ -24,3 +24,29 @@ dist-ssr
 *.sw?
 
 DEVELOPMENT_PROMPT
+
+# Environment variables (NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Contract secrets
+contracts/.env
+contracts/.env.local
+contracts/.env.production
+
+# API keys and secrets
+*.pem
+*.key
+*.p12
+*.jks
+
+# Foundry
+cache/
+out/
+lib/
+
+# Contracts (local development)
+contracts/
