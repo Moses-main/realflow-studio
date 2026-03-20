@@ -40,7 +40,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @param initialOwner Initial owner of the contract
      */
     function initialize(string memory baseURI, address initialOwner) public {
-        require(!initialized, "Already initialized");
+        if (initialized) revert AlreadyInitialized();
         initialized = true;
         _setURI(baseURI);
         _transferOwnership(initialOwner);
@@ -73,6 +73,50 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @param account Address not in whitelist
      */
     error NotWhitelisted(address account);
+
+    /**
+     * @notice Error thrown when already initialized
+     */
+    error AlreadyInitialized();
+
+    /**
+     * @notice Error thrown when token does not exist
+     * @param tokenId Token ID that doesn't exist
+     */
+    error TokenDoesNotExist(uint256 tokenId);
+
+    /**
+     * @notice Error thrown when royalty exceeds maximum
+     * @param royaltyBasisPoints Provided royalty value
+     */
+    error RoyaltyExceedsMax(uint96 royaltyBasisPoints);
+
+    /**
+     * @notice Error thrown when permit has expired
+     * @param deadline Expiration timestamp
+     */
+    error PermitExpired(uint256 deadline);
+
+    /**
+     * @notice Error thrown when signature is invalid
+     */
+    error InvalidSignature();
+
+    /**
+     * @notice Error thrown when address is zero
+     */
+    error ZeroAddress();
+
+    /**
+     * @notice Error thrown when metadata URI is empty
+     */
+    error EmptyMetadataURI();
+
+    /**
+     * @notice Error thrown when token ID already exists
+     * @param tokenId Existing token ID
+     */
+    error TokenAlreadyExists(uint256 tokenId);
 
     // Access control lists
     mapping(address => bool) private _whitelist;
@@ -146,7 +190,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @return The metadata URI associated with the token.
      */
     function uri(uint256 tokenId) public view override returns (string memory) {
-        require(bytes(_tokenURIs[tokenId]).length > 0, "RWATokenizer: URI query for nonexistent token");
+        if (bytes(_tokenURIs[tokenId]).length == 0) revert TokenDoesNotExist(tokenId);
         return _tokenURIs[tokenId];
     }
 
@@ -171,7 +215,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         address recipient,
         uint96 royaltyBasisPoints
     ) external onlyOwner {
-        require(royaltyBasisPoints <= 10000, "RWATokenizer: royalty exceeds max");
+        if (royaltyBasisPoints > 10000) revert RoyaltyExceedsMax(royaltyBasisPoints);
         _royaltyInfo[tokenId] = RoyaltyInfo(recipient, royaltyBasisPoints);
         emit TokenRoyaltySet(tokenId, recipient, royaltyBasisPoints);
     }
@@ -182,7 +226,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @param royaltyBasisPoints The default royalty amount in basis points.
      */
     function setDefaultRoyalty(address recipient, uint96 royaltyBasisPoints) external onlyOwner {
-        require(royaltyBasisPoints <= 10000, "RWATokenizer: royalty exceeds max");
+        if (royaltyBasisPoints > 10000) revert RoyaltyExceedsMax(royaltyBasisPoints);
         _defaultRoyaltyRecipient = recipient;
         _defaultRoyaltyBasisPoints = royaltyBasisPoints;
         emit DefaultRoyaltySet(recipient, royaltyBasisPoints);
@@ -237,7 +281,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(block.timestamp <= deadline, "Permit expired");
+        if (block.timestamp > deadline) revert PermitExpired(deadline);
         
         bytes32 structHash = keccak256(
             abi.encode(PERMIT_TYPEHASH, owner, operator, _nonces[owner]++, deadline)
@@ -245,7 +289,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         bytes32 hash = _hashTypedDataV4(structHash);
         address signer = ECDSA.recover(hash, v, r, s);
         
-        require(signer == owner, "Invalid signature");
+        if (signer != owner) revert InvalidSignature();
         
         _setApprovalForAll(owner, operator, true);
     }
@@ -291,7 +335,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @param status true to whitelist, false to remove
      */
     function setWhitelist(address account, bool status) external onlyOwner {
-        require(account != address(0), "Invalid address");
+        if (account == address(0)) revert ZeroAddress();
         _whitelist[account] = status;
         emit AddressWhitelisted(account, status);
     }
@@ -302,7 +346,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @param status true to blacklist, false to remove
      */
     function setBlacklist(address account, bool status) external onlyOwner {
-        require(account != address(0), "Invalid address");
+        if (account == address(0)) revert ZeroAddress();
         _blacklist[account] = status;
         emit AddressBlacklisted(account, status);
     }
@@ -419,8 +463,8 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         if (msg.sender != owner()) {
             revert UnauthorizedAccess(msg.sender);
         }
-        require(bytes(metadataURI).length > 0, "RWATokenizer: Metadata URI is required");
-        require(bytes(_tokenURIs[tokenId]).length == 0, "RWATokenizer: Token ID already exists");
+        if (bytes(metadataURI).length == 0) revert EmptyMetadataURI();
+        if (bytes(_tokenURIs[tokenId]).length != 0) revert TokenAlreadyExists(tokenId);
 
         _mint(to, tokenId, amount, "");
         _setTokenURI(tokenId, metadataURI);
