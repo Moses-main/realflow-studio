@@ -130,28 +130,50 @@ const Builder = () => {
   const estimateGas = async () => {
     setEstimatingGas(true);
     try {
+      const componentCount = nodes.length;
+      const complexity = nodes.reduce((acc, node) => {
+        const type = node.data.componentType as string;
+        if (type === "auctionEngine" || type === "paymentSplitter") return acc + 2;
+        if (type === "mintButton" || type === "assetUpload") return acc + 1;
+        return acc;
+      }, 0);
+
       const response = await fetch(`${API_URL}/api/web3/estimate-deployment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           contractType: "marketplace",
           nodes: nodes.map(n => n.data.componentType),
-          deployer: user.address
+          deployer: user.address,
+          complexity,
+          componentCount,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setGasEstimate(data.estimatedGas || "~0.02 MATIC");
+        setGasEstimate(data.estimatedGas || calculateFallbackEstimate(componentCount, complexity));
       } else {
-        setGasEstimate("~0.02 MATIC (estimated)");
+        setGasEstimate(calculateFallbackEstimate(componentCount, complexity));
       }
     } catch (error) {
       console.warn("Recoverable error during gas estimation:", error);
-      setGasEstimate("~0.02 MATIC (estimated)");
+      const componentCount = nodes.length;
+      setGasEstimate(calculateFallbackEstimate(componentCount, 0));
     } finally {
       setEstimatingGas(false);
     }
+  };
+
+  const calculateFallbackEstimate = (components: number, complexity: number): string => {
+    const baseGas = 1_500_000;
+    const perComponent = 200_000;
+    const complexityMultiplier = 1 + complexity * 0.25;
+    const estimatedGas = (baseGas + components * perComponent) * complexityMultiplier;
+    const gasPriceGwei = 30;
+    const ethPriceUsd = 0.50;
+    const estimatedCost = (estimatedGas * gasPriceGwei * 1e-9) * ethPriceUsd;
+    return `~${estimatedCost.toFixed(4)} MATIC (${Math.round(estimatedGas / 1e6)}M gas)`;
   };
 
   const handleDeployClick = () => {
