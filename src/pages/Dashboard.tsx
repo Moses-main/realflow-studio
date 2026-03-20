@@ -3,15 +3,45 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Blocks, Plus, TrendingUp, Package, Users, DollarSign,
-  ArrowRight, BarChart3, Settings, Wallet, Globe, Menu, X, LogOut
+  ArrowRight, BarChart3, Settings, Wallet, Globe, Menu, X, LogOut, Eye, Building2, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
-const templates = [
-  { name: "Real Estate Marketplace", desc: "Tokenize properties & fractional ownership", color: "from-primary to-cyan-400", icon: DollarSign },
-  { name: "Art & Collectibles", desc: "NFT marketplace for physical art", color: "from-accent to-pink-400", icon: Package },
-  { name: "Commodity Exchange", desc: "Trade tokenized commodities", color: "from-amber-500 to-orange-400", icon: BarChart3 },
+interface Template {
+  name: string;
+  desc: string;
+  color: string;
+  icon: React.ElementType;
+  features: string[];
+  components: string[];
+}
+
+const templates: Template[] = [
+  { 
+    name: "Real Estate Marketplace", 
+    desc: "Tokenize properties & fractional ownership", 
+    color: "from-primary to-cyan-400", 
+    icon: DollarSign,
+    features: ["Property tokenization", "Fractional ownership", "Rental income distribution", "KYC/AML compliance"],
+    components: ["Property Upload", "Token Mint", "Listing Grid", "Ownership Ledger", "Dividend Distributor"]
+  },
+  { 
+    name: "Art & Collectibles", 
+    desc: "NFT marketplace for physical art", 
+    color: "from-accent to-pink-400", 
+    icon: Package,
+    features: ["Physical asset backing", "Provenance tracking", "Auction functionality", "Royalty distribution"],
+    components: ["Art Upload", "NFT Mint", "Gallery Grid", "Bid Engine", "Provenance Tracker"]
+  },
+  { 
+    name: "Commodity Exchange", 
+    desc: "Trade tokenized commodities", 
+    color: "from-amber-500 to-orange-400", 
+    icon: BarChart3,
+    features: ["Real-time pricing", "Multi-commodity support", "Settlement automation", "Warehouse verification"],
+    components: ["Commodity Upload", "Token Mint", "Exchange Grid", "Price Oracle", "Settlement Engine"]
+  },
 ];
 
 const recentMarketplaces = [
@@ -32,6 +62,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, connectWallet, disconnectWallet } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -251,7 +282,7 @@ const Dashboard = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.05 }}
-                  onClick={() => navigate("/builder")}
+                  onClick={() => setSelectedTemplate(t)}
                   className="glass rounded-xl p-4 lg:p-6 cursor-pointer group hover:border-primary/30 transition-all"
                 >
                   <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br ${t.color} flex items-center justify-center mb-3 lg:mb-4`}>
@@ -260,7 +291,7 @@ const Dashboard = () => {
                   <h3 className="font-semibold mb-1 text-sm lg:text-base">{t.name}</h3>
                   <p className="text-xs lg:text-sm text-muted-foreground mb-3 lg:mb-4 line-clamp-2">{t.desc}</p>
                   <div className="flex items-center gap-1 text-xs lg:text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    Use Template <ArrowRight className="w-3 h-3 lg:w-4 lg:h-4" />
+                    Preview <Eye className="w-3 h-3 lg:w-4 lg:h-4" />
                   </div>
                 </motion.div>
               ))}
@@ -310,6 +341,95 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      <AnimatePresence>
+        {selectedTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedTemplate(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass-strong rounded-2xl max-w-lg w-full p-6 border border-border"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${selectedTemplate.color} flex items-center justify-center`}>
+                    <selectedTemplate.icon className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">{selectedTemplate.name}</h3>
+                    <p className="text-sm text-muted-foreground">Template Preview</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedTemplate(null)}
+                  className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-4">{selectedTemplate.desc}</p>
+
+              <div className="mb-4">
+                <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Included Components
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTemplate.components.map((comp) => (
+                    <span 
+                      key={comp}
+                      className="text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground"
+                    >
+                      {comp}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="text-sm font-medium mb-2">Key Features</h4>
+                <ul className="space-y-1.5">
+                  {selectedTemplate.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 gap-2"
+                  onClick={() => setSelectedTemplate(null)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    setSelectedTemplate(null);
+                    navigate("/builder");
+                  }}
+                >
+                  <Building2 className="w-4 h-4" />
+                  Use This Template
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
