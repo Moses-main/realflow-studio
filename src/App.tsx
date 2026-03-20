@@ -14,6 +14,7 @@ import Explore from "./pages/Explore";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { Search, Command } from "lucide-react";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -109,14 +110,14 @@ const App = () => (
       <BrowserRouter>
         <KeyboardShortcutsHandler />
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/builder" element={<Builder />} />
-          <Route path="/marketplaces" element={<MarketplaceList />} />
-          <Route path="/marketplaces/:id" element={<MarketplaceDetail />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/" element={<ErrorBoundary><Index /></ErrorBoundary>} />
+          <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <Route path="/builder" element={<ErrorBoundary><Builder /></ErrorBoundary>} />
+          <Route path="/marketplaces" element={<ErrorBoundary><MarketplaceList /></ErrorBoundary>} />
+          <Route path="/marketplaces/:id" element={<ErrorBoundary><MarketplaceDetail /></ErrorBoundary>} />
+          <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
+          <Route path="/explore" element={<ErrorBoundary><Explore /></ErrorBoundary>} />
+          <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
