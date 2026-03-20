@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Bell, Shield, Palette,
-  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,23 @@ interface ProfileForm {
   email: string;
   bio: string;
 }
+
+interface Transaction {
+  hash: string;
+  type: "deploy" | "mint" | "transfer" | "swap";
+  amount: string;
+  timestamp: string;
+  status: "success" | "pending" | "failed";
+  description: string;
+}
+
+const mockTransactions: Transaction[] = [
+  { hash: "0x8f2e9...4a7b1", type: "deploy", amount: "0.023 MATIC", timestamp: "2 mins ago", status: "success", description: "MarketplaceFactory deployed" },
+  { hash: "0x3c4d5...9e2f0", type: "mint", amount: "100 ERC-1155", timestamp: "15 mins ago", status: "success", description: "Tokenized Lagos Property" },
+  { hash: "0x7b8c9...1d3e4", type: "transfer", amount: "0.005 MATIC", timestamp: "1 hour ago", status: "success", description: "Storage deposit" },
+  { hash: "0x2a3b4...5c6d7", type: "swap", amount: "50 ERC-1155", timestamp: "3 hours ago", status: "success", description: "Fraction purchased" },
+  { hash: "0x1x2y3...8z9w0", type: "deploy", amount: "0.021 MATIC", timestamp: "1 day ago", status: "success", description: "RWATokenizer deployed" },
+];
 
 const STORAGE_KEY = "realflow-user-profile";
 
@@ -261,6 +278,73 @@ const Settings = () => {
                       <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                       <p className="text-muted-foreground mb-4">No wallet connected</p>
                       <Button onClick={connectWallet}>Connect Wallet</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Transaction History</CardTitle>
+                  <CardDescription>View your past transactions on Polygon Amoy</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {mockTransactions.length > 0 ? (
+                    <div className="space-y-3">
+                      {mockTransactions.map((tx) => (
+                        <div 
+                          key={tx.hash}
+                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-secondary/30 transition-colors cursor-pointer"
+                          onClick={() => window.open(`https://amoy.polygonscan.com/tx/${tx.hash}`, "_blank")}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                            tx.type === "deploy" ? "bg-primary/10" :
+                            tx.type === "mint" ? "bg-accent/10" :
+                            tx.type === "transfer" ? "bg-amber-500/10" : "bg-green-500/10"
+                          }`}>
+                            {tx.type === "deploy" ? <ArrowUpRight className="w-4 h-4 text-primary" /> :
+                             tx.type === "mint" ? <ArrowUpRight className="w-4 h-4 text-accent" /> :
+                             tx.type === "transfer" ? <ArrowDownLeft className="w-4 h-4 text-amber-500" /> :
+                             <ArrowUpRight className="w-4 h-4 text-green-500" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate">{tx.description}</p>
+                              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                                tx.status === "success" ? "bg-primary/10 text-primary" :
+                                tx.status === "pending" ? "bg-amber-500/10 text-amber-500" :
+                                "bg-destructive/10 text-destructive"
+                              }`}>
+                                {tx.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono">{tx.hash}</span>
+                              <span>•</span>
+                              <span>{tx.amount}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {tx.timestamp}
+                              </span>
+                            </div>
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                        </div>
+                      ))}
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-4"
+                        onClick={() => user.address && window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
+                      >
+                        View All on Explorer
+                        <ExternalLink className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">No transactions yet</p>
                     </div>
                   )}
                 </CardContent>
