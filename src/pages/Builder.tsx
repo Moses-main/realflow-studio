@@ -744,9 +744,10 @@ contract Marketplace is ERC1155, Ownable {
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed right-0 top-0 bottom-0 w-[320px] md:w-80 lg:w-96 border-l border-border glass-strong overflow-hidden shrink-0 z-50 md:relative md:translate-x-0"
+                className="fixed right-0 top-0 h-screen w-[320px] md:w-80 lg:w-96 border-l border-border glass-strong overflow-hidden shrink-0 z-50 md:relative md:translate-x-0 md:h-full"
               >
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+              <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCreativeMode(false)}
@@ -773,6 +774,7 @@ contract Marketplace is ERC1155, Ownable {
                 </button>
               </div>
               {creativeMode ? <CreativeMode /> : <AISidebar />}
+              </div>
             </motion.div>
             </React.Fragment>
           )}
