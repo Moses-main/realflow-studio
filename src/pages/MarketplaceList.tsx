@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Package, Plus, MoreVertical, ExternalLink, Trash2, Edit, 
-  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon, Search
+  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon, Search, Building2, Palette, Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +22,19 @@ import {
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 
+const categories = [
+  { id: "all", label: "All", icon: Package },
+  { id: "real-estate", label: "Real Estate", icon: Building2 },
+  { id: "art", label: "Art & Collectibles", icon: Palette },
+  { id: "commodities", label: "Commodities", icon: Coins },
+];
+
 const mockMarketplaces = [
   { 
     id: "1", 
     name: "Lagos Real Estate Hub", 
     status: "live", 
+    category: "real-estate",
     assets: 24, 
     volume: "$142K",
     address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0f123",
@@ -36,6 +44,7 @@ const mockMarketplaces = [
     id: "2", 
     name: "Buenos Aires Art Market", 
     status: "draft", 
+    category: "art",
     assets: 8, 
     volume: "$0",
     address: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
@@ -45,6 +54,7 @@ const mockMarketplaces = [
     id: "3", 
     name: "Mexico Commodity Exchange", 
     status: "live", 
+    category: "commodities",
     assets: 56, 
     volume: "$890K",
     address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
@@ -77,7 +87,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
           } flex items-center justify-center`}>
             <Package className="w-6 h-6 text-primary-foreground" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-1.5">
             <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
               marketplace.status === "live" 
                 ? "bg-primary/10 text-primary" 
@@ -86,41 +96,44 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
               {marketplace.status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
               {marketplace.status === "live" ? "Live" : "Draft"}
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowDetails(true)}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/builder">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={copyAddress}>
-                  {copied ? <Check className="w-4 h-4 mr-2" /> : <CopyIcon className="w-4 h-4 mr-2" />}
-                  {copied ? "Copied!" : "Copy Address"}
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <a href={`https://amoy.polygonscan.com/address/${marketplace.address}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View on Explorer
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <span className="text-xs text-muted-foreground capitalize">
+              {marketplace.category?.replace("-", " & ")}
+            </span>
           </div>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 absolute top-4 right-4">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowDetails(true)}>
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/builder">
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={copyAddress}>
+              {copied ? <Check className="w-4 h-4 mr-2" /> : <CopyIcon className="w-4 h-4 mr-2" />}
+              {copied ? "Copied!" : "Copy Address"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={`https://amoy.polygonscan.com/address/${marketplace.address}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Explorer
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Link to="/builder" className="block mb-3">
           <h3 className="font-semibold hover:text-primary transition-colors">{marketplace.name}</h3>
@@ -161,16 +174,16 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
                 <p className="font-medium capitalize">{marketplace.status}</p>
               </div>
               <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Category</p>
+                <p className="font-medium capitalize">{marketplace.category?.replace("-", " & ")}</p>
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Assets</p>
                 <p className="font-medium">{marketplace.assets}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Volume</p>
                 <p className="font-medium">{marketplace.volume}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-medium">{marketplace.createdAt}</p>
               </div>
             </div>
             <div className="space-y-1">
@@ -200,14 +213,16 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
 const MarketplaceList = () => {
   const { user, connectWallet } = useAuth();
   const [filter, setFilter] = useState<"all" | "live" | "draft">("all");
+  const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
 
   const filteredMarketplaces = mockMarketplaces.filter(m => {
     const matchesFilter = filter === "all" || m.status === filter;
+    const matchesCategory = category === "all" || m.category === category;
     const matchesSearch = search === "" || 
       m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.address.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesCategory && matchesSearch;
   });
 
   return (
@@ -266,6 +281,25 @@ const MarketplaceList = () => {
                 </Button>
               ))}
             </div>
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <Button
+                  key={cat.id}
+                  variant={category === cat.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategory(cat.id)}
+                  className="gap-1.5 whitespace-nowrap"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {cat.label}
+                </Button>
+              );
+            })}
           </div>
 
           {/* Stats Summary */}
