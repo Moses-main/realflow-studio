@@ -72,8 +72,8 @@ export default {
         },
         // Canvas specific
         canvas: {
-          bg: "#0e1012",
-          dot: "#1e293b",
+          bg: "#0a0b0d",
+          dot: "#1a1c1e",
         },
       },
       borderRadius: {
