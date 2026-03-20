@@ -118,6 +118,29 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      */
     error TokenAlreadyExists(uint256 tokenId);
 
+    /**
+     * @notice Error thrown when supply cap exceeded
+     * @param tokenId Token ID
+     * @param currentSupply Current supply
+     * @param cap Maximum supply cap
+     */
+    error SupplyCapExceeded(uint256 tokenId, uint256 currentSupply, uint256 cap);
+
+    /**
+     * @notice Error thrown when invalid cap value
+     */
+    error InvalidCap();
+
+    // Supply cap mappings
+    mapping(uint256 => uint256) private _tokenSupply;
+    mapping(uint256 => uint256) private _tokenCap;
+    bool private _useDefaultCap;
+    uint256 private _defaultCap;
+
+    // Event for supply cap changes
+    event SupplyCapUpdated(uint256 indexed tokenId, uint256 oldCap, uint256 newCap);
+    event DefaultSupplyCapUpdated(uint256 oldCap, uint256 newCap);
+
     // Access control lists
     mapping(address => bool) private _whitelist;
     mapping(address => bool) private _blacklist;
@@ -452,7 +475,7 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
     }
 
     /**
-     * @dev Override mint to check access lists
+     * @dev Override mint to check access lists and supply cap
      */
     function mintRWA(
         address to,
@@ -466,10 +489,68 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
         if (bytes(metadataURI).length == 0) revert EmptyMetadataURI();
         if (bytes(_tokenURIs[tokenId]).length != 0) revert TokenAlreadyExists(tokenId);
 
+        // Check supply cap
+        uint256 cap = _getTokenCap(tokenId);
+        if (cap > 0 && _tokenSupply[tokenId] + amount > cap) {
+            revert SupplyCapExceeded(tokenId, _tokenSupply[tokenId], cap);
+        }
+
         _mint(to, tokenId, amount, "");
+        _tokenSupply[tokenId] += amount;
         _setTokenURI(tokenId, metadataURI);
 
         emit TokenMinted(to, tokenId, amount, metadataURI);
+    }
+
+    /**
+     * @notice Set supply cap for a specific token
+     * @param tokenId Token ID
+     * @param cap Maximum supply (0 for unlimited)
+     */
+    function setTokenCap(uint256 tokenId, uint256 cap) external onlyOwner {
+        uint256 oldCap = _tokenCap[tokenId];
+        _tokenCap[tokenId] = cap;
+        emit SupplyCapUpdated(tokenId, oldCap, cap);
+    }
+
+    /**
+     * @notice Set default supply cap for all tokens
+     * @param cap Default maximum supply (0 for unlimited)
+     */
+    function setDefaultSupplyCap(uint256 cap) external onlyOwner {
+        uint256 oldCap = _defaultCap;
+        _defaultCap = cap;
+        _useDefaultCap = true;
+        emit DefaultSupplyCapUpdated(oldCap, cap);
+    }
+
+    /**
+     * @notice Get supply cap for a token
+     * @param tokenId Token ID
+     * @return Cap for the token (0 if unlimited)
+     */
+    function getTokenCap(uint256 tokenId) external view returns (uint256) {
+        return _getTokenCap(tokenId);
+    }
+
+    /**
+     * @notice Get current supply for a token
+     * @param tokenId Token ID
+     * @return Current supply
+     */
+    function getTokenSupply(uint256 tokenId) external view returns (uint256) {
+        return _tokenSupply[tokenId];
+    }
+
+    /**
+     * @dev Internal function to get token cap
+     */
+    function _getTokenCap(uint256 tokenId) internal view returns (uint256) {
+        uint256 cap = _tokenCap[tokenId];
+        if (cap == 0 && _useDefaultCap) {
+            return _defaultCap;
+        }
+        return cap;
     }
 
     /**
