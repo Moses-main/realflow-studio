@@ -1,4 +1,4 @@
-import { encodeFunctionData, decodeFunctionResult, encodeAbiParameters, decodeAbiParameters } from "viem";
+import { encodeFunctionData, decodeFunctionResult, encodeAbiParameters, decodeAbiParameters, keccak256, toHex } from "viem";
 
 export interface FunctionInput {
   type: string;
@@ -180,29 +180,14 @@ export function getFunctionSelector(functionName: string): string {
   return signatureToSelector(signature);
 }
 
-function signatureToSelector(signature: string): string {
-  const hash = stringToHex(signature);
+export function signatureToSelector(signature: string): string {
+  const hash = keccak256(toHex(signature));
   return hash.slice(0, 10);
 }
 
-function stringToHex(str: string): string {
-  let hex = "";
-  for (let i = 0; i < str.length; i++) {
-    hex += str.charCodeAt(i).toString(16).padStart(2, "0");
-  }
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  
-  if (typeof window !== "undefined" && window.crypto && window.crypto.subtle) {
-    return window.crypto.subtle.digest("SHA-256", bytes).then(hashHex => {
-      const hashArray = Array.from(new Uint8Array(hashHex));
-      return "0x" + hashArray.map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 10);
-    }) as unknown as string;
-  }
-  
-  return "0x00000000";
+export function getAbiSignature(fragment: FunctionFragment): string {
+  const inputs = fragment.inputs.map(i => i.type).join(",");
+  return `${fragment.name}(${inputs})`;
 }
 
 export const erc20Abi = [
@@ -212,4 +197,35 @@ export const erc20Abi = [
   { name: "totalSupply", type: "function", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { name: "transferFrom", type: "function", inputs: [{ type: "address", name: "from" }, { type: "address", name: "to" }, { type: "uint256", name: "amount" }], outputs: [{ type: "bool" }], stateMutability: "nonpayable" },
   { name: "allowance", type: "function", inputs: [{ type: "address", name: "owner" }, { type: "address", name: "spender" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+] as const;
+
+export const erc1155Abi = [
+  { name: "balanceOf", type: "function", inputs: [{ type: "address", name: "account" }, { type: "uint256", name: "id" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { name: "balanceOfBatch", type: "function", inputs: [{ type: "address[]", name: "accounts" }, { type: "uint256[]", name: "ids" }], outputs: [{ type: "uint256[]" }], stateMutability: "view" },
+  { name: "setApprovalForAll", type: "function", inputs: [{ type: "address", name: "operator" }, { type: "bool", name: "approved" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "isApprovedForAll", type: "function", inputs: [{ type: "address", name: "account" }, { type: "address", name: "operator" }], outputs: [{ type: "bool" }], stateMutability: "view" },
+  { name: "safeTransferFrom", type: "function", inputs: [{ type: "address", name: "from" }, { type: "address", name: "to" }, { type: "uint256", name: "id" }, { type: "uint256", name: "amount" }, { type: "bytes", name: "data" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "safeBatchTransferFrom", type: "function", inputs: [{ type: "address", name: "from" }, { type: "address", name: "to" }, { type: "uint256[]", name: "ids" }, { type: "uint256[]", name: "amounts" }, { type: "bytes", name: "data" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "uri", type: "function", inputs: [{ type: "uint256", name: "tokenId" }], outputs: [{ type: "string" }], stateMutability: "view" },
+] as const;
+
+export const erc721Abi = [
+  { name: "balanceOf", type: "function", inputs: [{ type: "address", name: "owner" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { name: "ownerOf", type: "function", inputs: [{ type: "uint256", name: "tokenId" }], outputs: [{ type: "address" }], stateMutability: "view" },
+  { name: "safeTransferFrom", type: "function", inputs: [{ type: "address", name: "from" }, { type: "address", name: "to" }, { type: "uint256", name: "tokenId" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "transferFrom", type: "function", inputs: [{ type: "address", name: "from" }, { type: "address", name: "to" }, { type: "uint256", name: "tokenId" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "approve", type: "function", inputs: [{ type: "address", name: "to" }, { type: "uint256", name: "tokenId" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "getApproved", type: "function", inputs: [{ type: "uint256", name: "tokenId" }], outputs: [{ type: "address" }], stateMutability: "view" },
+  { name: "setApprovalForAll", type: "function", inputs: [{ type: "address", name: "operator" }, { type: "bool", name: "approved" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "isApprovedForAll", type: "function", inputs: [{ type: "address", name: "owner" }, { type: "address", name: "operator" }], outputs: [{ type: "bool" }], stateMutability: "view" },
+  { name: "supportsInterface", type: "function", inputs: [{ type: "bytes4", name: "interfaceId" }], outputs: [{ type: "bool" }], stateMutability: "view" },
+  { name: "name", type: "function", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },
+  { name: "symbol", type: "function", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },
+  { name: "tokenURI", type: "function", inputs: [{ type: "uint256", name: "tokenId" }], outputs: [{ type: "string" }], stateMutability: "view" },
+] as const;
+
+export const royaltyAbi = [
+  { name: "royaltyInfo", type: "function", inputs: [{ type: "uint256", name: "tokenId" }, { type: "uint256", name: "salePrice" }], outputs: [{ type: "address" }, { type: "uint256" }], stateMutability: "view" },
+  { name: "setTokenRoyalty", type: "function", inputs: [{ type: "uint256", name: "tokenId" }, { type: "address", name: "receiver" }, { type: "uint96", name: "royaltyBasisPoints" }], outputs: [], stateMutability: "nonpayable" },
+  { name: "setDefaultRoyalty", type: "function", inputs: [{ type: "address", name: "receiver" }, { type: "uint96", name: "royaltyBasisPoints" }], outputs: [], stateMutability: "nonpayable" },
 ] as const;
