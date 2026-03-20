@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Builder from "./pages/Builder";
 import MarketplaceList from "./pages/MarketplaceList";
+import MarketplaceDetail from "./pages/MarketplaceDetail";
 import Analytics from "./pages/Analytics";
 import Explore from "./pages/Explore";
 import Settings from "./pages/Settings";
@@ -112,6 +113,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/builder" element={<Builder />} />
           <Route path="/marketplaces" element={<MarketplaceList />} />
+          <Route path="/marketplaces/:id" element={<MarketplaceDetail />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/settings" element={<Settings />} />
