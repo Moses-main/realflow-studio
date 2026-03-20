@@ -865,14 +865,14 @@ contract Marketplace is ERC1155, Ownable {
             onConnect={onConnect}
             nodeTypes={nodeTypes}
             fitView
-            className="bg-[var(--canvas-bg)]"
-            style={{ height: "100%", width: "100%" }}
+            className="bg-[#0a0b0d]"
+            style={{ height: "100%", width: "100%", backgroundColor: "#0a0b0d" }}
           >
-            <Background color="var(--canvas-dot)" gap={24} size={1} />
+            <Background color="#1a1c1e" gap={24} size={1} />
             <Controls 
               style={{
-                backgroundColor: 'var(--surface)',
-                borderColor: 'var(--border)',
+                backgroundColor: '#111315',
+                borderColor: '#1e293b',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
               }}
@@ -880,13 +880,13 @@ contract Marketplace is ERC1155, Ownable {
             />
             <MiniMap 
               style={{
-                backgroundColor: 'var(--surface)',
-                borderColor: 'var(--border)',
+                backgroundColor: '#111315',
+                borderColor: '#1e293b',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
               }}
-              nodeColor="var(--primary)"
-              maskColor="rgba(0, 0, 0, 0.6)"
+              nodeColor="#5e6ad2"
+              maskColor="rgba(0, 0, 0, 0.7)"
             />
           </ReactFlow>
 
