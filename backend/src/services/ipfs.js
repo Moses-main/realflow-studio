@@ -4,6 +4,10 @@ let ipfsClient = null;
 let clientCreationFailed = false;
 const MAX_RETRIES = 3;
 
+// Configurable IPFS gateway
+const IPFS_GATEWAY = process.env.IPFS_GATEWAY || 'ipfs.io';
+const IPFS_API_HOST = process.env.IPFS_API_HOST || 'ipfs.io';
+
 function getIPFSClient() {
   if (clientCreationFailed) {
     throw new Error('IPFS client unavailable - previous creation failed');
@@ -16,7 +20,7 @@ function getIPFSClient() {
     try {
       if (projectId && projectSecret) {
         ipfsClient = create({
-          host: 'ipfs.pinata.cloud',
+          host: process.env.IPFS_API_HOST || 'ipfs.pinata.cloud',
           port: 443,
           protocol: 'https',
           headers: {
@@ -26,7 +30,7 @@ function getIPFSClient() {
         });
       } else {
         ipfsClient = create({
-          host: 'ipfs.io',
+          host: IPFS_API_HOST,
           port: 443,
           protocol: 'https'
         });
@@ -66,7 +70,7 @@ export async function uploadToIPFS({ name, description, image, properties, asset
     return {
       cid: cid.toString(),
       url: `ipfs://${cid.toString()}`,
-      gatewayUrl: `https://ipfs.io/ipfs/${cid.toString()}`
+      gatewayUrl: `https://${IPFS_GATEWAY}/ipfs/${cid.toString()}`
     };
   } catch (error) {
     console.error('IPFS upload error:', error);
