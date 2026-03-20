@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -81,6 +81,11 @@ const Builder = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([{ nodes: initialNodes, edges: initialEdges }]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [showGitHubExport, setShowGitHubExport] = useState(false);
+  const [githubPat, setGithubPat] = useState("");
+  const [githubRepo, setGithubRepo] = useState("realflow-marketplace");
+  const [githubUsername, setGithubUsername] = useState("");
+  const [exportingToGithub, setExportingToGithub] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -395,6 +400,95 @@ contract Marketplace is ERC1155, Ownable {
       title: "Exported!",
       description: `Your marketplace exported as ${format.toUpperCase()}`,
     });
+  };
+
+  const handleGitHubExport = async () => {
+    if (!githubPat || !githubUsername || !githubRepo) {
+      toast({ title: "Missing fields", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+
+    setExportingToGithub(true);
+    try {
+      const config = { nodes, edges };
+      const solidityCode = generateSolidityCode();
+      
+      const files = {
+        "marketplace-config.json": JSON.stringify(config, null, 2),
+        "contracts/Marketplace.sol": solidityCode,
+        "README.md": `# ${githubRepo}\n\nGenerated with RealFlow Studio\n\n## Components\n${nodes.map(n => `- ${n.data.label}`).join('\n')}\n\n## Deployment\nDeployed to Polygon Amoy testnet.\n`,
+        "package.json": JSON.stringify({
+          name: githubRepo,
+          version: "1.0.0",
+          scripts: {
+            deploy: "npx hardhat run scripts/deploy.js --network amoy"
+          }
+        }, null, 2),
+      };
+
+      const repoCreateRes = await fetch("https://api.github.com/user/repos", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${githubPat}`,
+          "Content-Type": "application/json",
+          Accept: "application/vnd.github.v3+json",
+        },
+        body: JSON.stringify({
+          name: githubRepo,
+          description: "Marketplace generated with RealFlow Studio",
+          private: true,
+          auto_init: true,
+        }),
+      });
+
+      if (!repoCreateRes.ok && repoCreateRes.status !== 422) {
+        const err = await repoCreateRes.json();
+        if (err.message !== "name already exists on this account") {
+          throw new Error(err.message || "Failed to create repository");
+        }
+      }
+
+      for (const [path, content] of Object.entries(files)) {
+        const encodedPath = Buffer.from(path).toString("base64");
+        await fetch(`https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${path}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${githubPat}`,
+            "Content-Type": "application/json",
+            Accept: "application/vnd.github.v3+json",
+          },
+          body: JSON.stringify({
+            message: `Add ${path}`,
+            content: Buffer.from(content).toString("base64"),
+          }),
+        });
+      }
+
+      setShowGitHubExport(false);
+      toast({
+        title: "Exported to GitHub!",
+        description: `Repository created at github.com/${githubUsername}/${githubRepo}`,
+        action: (
+          <a
+            href={`https://github.com/${githubUsername}/${githubRepo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open
+          </a>
+        ),
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Failed to export to GitHub",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingToGithub(false);
+    }
   };
 
   const handleClear = () => {
@@ -819,6 +913,19 @@ contract Marketplace is ERC1155, Ownable {
                       <div className="text-xs text-muted-foreground">Export as deployable smart contract</div>
                     </div>
                   </button>
+                  <button
+                    onClick={() => {
+                      setShowExportDialog(false);
+                      setShowGitHubExport(true);
+                    }}
+                    className="w-full p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors flex items-center gap-3"
+                  >
+                    <Github className="w-5 h-5 text-white" />
+                    <div className="text-left">
+                      <div className="font-medium">GitHub Repository</div>
+                      <div className="text-xs text-muted-foreground">Push to a new GitHub repository</div>
+                    </div>
+                  </button>
                 </div>
                 <Button
                   variant="outline"
@@ -827,6 +934,96 @@ contract Marketplace is ERC1155, Ownable {
                 >
                   Cancel
                 </Button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showGitHubExport && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowGitHubExport(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="glass-strong rounded-xl max-w-md w-full p-6 border border-border"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <Github className="w-6 h-6 text-white" />
+                  <h3 className="text-lg font-semibold">Export to GitHub</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Create a new GitHub repository and push your marketplace code.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">GitHub Username</label>
+                    <input
+                      type="text"
+                      value={githubUsername}
+                      onChange={(e) => setGithubUsername(e.target.value)}
+                      placeholder="your-username"
+                      className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Personal Access Token</label>
+                    <input
+                      type="password"
+                      value={githubPat}
+                      onChange={(e) => setGithubPat(e.target.value)}
+                      placeholder="ghp_xxxxxxxxxxxx"
+                      className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Create a token at GitHub Settings {'->'} Developer settings {'->'} Personal access tokens
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Repository Name</label>
+                    <input
+                      type="text"
+                      value={githubRepo}
+                      onChange={(e) => setGithubRepo(e.target.value)}
+                      placeholder="my-marketplace"
+                      className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowGitHubExport(false)}
+                      disabled={exportingToGithub}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleGitHubExport}
+                      disabled={exportingToGithub || !githubPat || !githubUsername || !githubRepo}
+                    >
+                      {exportingToGithub ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Github className="w-4 h-4 mr-2" />
+                          Export
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </motion.div>
             </motion.div>
           )}
