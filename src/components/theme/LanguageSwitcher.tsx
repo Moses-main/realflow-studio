@@ -11,6 +11,7 @@ interface LanguageContextType {
 
 const translations: Record<Language, Record<string, string>> = {
   en: {
+    // Navigation
     "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.builder": "Builder",
@@ -18,26 +19,64 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.explore": "Explore",
     "nav.settings": "Settings",
     "nav.analytics": "Analytics",
+    
+    // Hero
     "hero.title": "Build RWA Marketplaces in Minutes",
     "hero.subtitle": "AI-powered tools to tokenize real-world assets and deploy to Polygon",
     "hero.cta": "Start Building",
     "hero.secondary": "Explore Templates",
+    
+    // Dashboard
     "dashboard.title": "Dashboard",
     "dashboard.stats.totalValue": "Total Value Locked",
     "dashboard.stats.transactions": "Transactions",
     "dashboard.stats.nfts": "NFTs Minted",
     "dashboard.stats.fee": "Platform Fee",
+    "dashboard.quickActions": "Quick Actions",
+    "dashboard.quickActions.deploy": "Deploy New Marketplace",
+    "dashboard.quickActions.mint": "Mint NFT",
+    "dashboard.quickActions.transfer": "Transfer Assets",
+    "dashboard.recentActivity": "Recent Activity",
+    "dashboard.recentActivity.empty": "No recent activity",
+    "dashboard.contracts": "Deployed Contracts",
+    "dashboard.contracts.empty": "No contracts deployed yet",
+    
+    // Builder
     "builder.deploy": "Deploy Marketplace",
     "builder.export": "Export",
     "builder.save": "Save",
     "builder.preview": "Preview",
     "builder.test": "Test Mode",
     "builder.ai.title": "AI Co-Builder",
+    "builder.palette.components": "Components",
+    "builder.canvas.empty": "Drag components here",
+    
+    // Marketplaces
+    "marketplaces.title": "Marketplaces",
+    "marketplaces.create": "Create Marketplace",
+    "marketplaces.empty": "No marketplaces found",
+    
+    // Settings
+    "settings.title": "Settings",
+    "settings.profile": "Profile",
+    "settings.wallet": "Wallet",
+    "settings.notifications": "Notifications",
+    "settings.appearance": "Appearance",
+    
+    // Common
     "common.loading": "Loading...",
     "common.error": "An error occurred",
     "common.success": "Success",
+    "common.save": "Save",
+    "common.cancel": "Cancel",
+    "common.delete": "Delete",
+    "common.connect": "Connect Wallet",
+    "common.disconnect": "Disconnect",
+    "common.connected": "Connected",
+    "common.notConnected": "Not Connected",
   },
   es: {
+    // Navigation
     "nav.home": "Inicio",
     "nav.dashboard": "Panel",
     "nav.builder": "Constructor",
@@ -45,24 +84,61 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.explore": "Explorar",
     "nav.settings": "Configuración",
     "nav.analytics": "Analítica",
+    
+    // Hero
     "hero.title": "Crea Mercados RWA en Minutos",
     "hero.subtitle": "Herramientas impulsadas por IA para tokenizar activos del mundo real y desplegar en Polygon",
     "hero.cta": "Empezar a Construir",
     "hero.secondary": "Explorar Plantillas",
+    
+    // Dashboard
     "dashboard.title": "Panel de Control",
     "dashboard.stats.totalValue": "Valor Total Bloqueado",
     "dashboard.stats.transactions": "Transacciones",
     "dashboard.stats.nfts": "NFTs Acuñados",
     "dashboard.stats.fee": "Comisión de Plataforma",
+    "dashboard.quickActions": "Acciones Rápidas",
+    "dashboard.quickActions.deploy": "Desplegar Nuevo Mercado",
+    "dashboard.quickActions.mint": "Acuñar NFT",
+    "dashboard.quickActions.transfer": "Transferir Activos",
+    "dashboard.recentActivity": "Actividad Reciente",
+    "dashboard.recentActivity.empty": "Sin actividad reciente",
+    "dashboard.contracts": "Contratos Desplegados",
+    "dashboard.contracts.empty": "Sin contratos desplegados",
+    
+    // Builder
     "builder.deploy": "Desplegar Mercado",
     "builder.export": "Exportar",
     "builder.save": "Guardar",
     "builder.preview": "Vista Previa",
     "builder.test": "Modo Prueba",
     "builder.ai.title": "IA Co-Constructor",
+    "builder.palette.components": "Componentes",
+    "builder.canvas.empty": "Arrastra componentes aquí",
+    
+    // Marketplaces
+    "marketplaces.title": "Mercados",
+    "marketplaces.create": "Crear Mercado",
+    "marketplaces.empty": "No se encontraron mercados",
+    
+    // Settings
+    "settings.title": "Configuración",
+    "settings.profile": "Perfil",
+    "settings.wallet": "Billetera",
+    "settings.notifications": "Notificaciones",
+    "settings.appearance": "Apariencia",
+    
+    // Common
     "common.loading": "Cargando...",
     "common.error": "Ocurrió un error",
     "common.success": "Éxito",
+    "common.save": "Guardar",
+    "common.cancel": "Cancelar",
+    "common.delete": "Eliminar",
+    "common.connect": "Conectar Billetera",
+    "common.disconnect": "Desconectar",
+    "common.connected": "Conectado",
+    "common.notConnected": "Sin Conectar",
   },
 };
 
