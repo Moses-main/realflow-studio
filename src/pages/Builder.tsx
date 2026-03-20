@@ -106,7 +106,7 @@ const Builder = () => {
   );
 
   const handleDeploy = async () => {
-    if (!user.isWalletConnected) {
+    if (!user.isWalletConnected || !user.address) {
       toast({
         title: "Wallet not connected",
         description: "Please connect your wallet to deploy.",
