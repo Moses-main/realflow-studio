@@ -48,6 +48,22 @@ const PRIVY_APP_ID = (
   ""
 ).toString();
 
+const requiredEnvVars = [
+  { name: "VITE_WALLET_CONNECT_PROJECT_ID", value: WALLET_CONNECT_PROJECT_ID, required: false },
+  { name: "VITE_PRIVY_APP_ID", value: PRIVY_APP_ID, required: false },
+];
+
+const missingRequired = requiredEnvVars
+  .filter(v => v.required && !v.value)
+  .map(v => v.name);
+
+if (missingRequired.length > 0) {
+  console.warn(
+    `%c[RealFlow Studio] Missing required environment variables: ${missingRequired.join(", ")}`,
+    "color: orange; font-weight: bold;"
+  );
+}
+
 const { chains, publicClient } = configureChains(
   [polygonAmoy, polygon, mainnet],
   [publicProvider()]
