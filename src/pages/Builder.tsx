@@ -610,13 +610,64 @@ contract Marketplace is ERC1155, Ownable {
   return (
     <ReactFlowProvider>
       <div className="h-screen flex bg-background overflow-hidden">
-        {/* Mobile sidebar toggle */}
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 z-30 p-2 glass rounded-lg md:hidden"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        {/* Mobile top bar */}
+        <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between p-2 glass-strong border-b border-[var(--border)] md:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
+              <Blocks className="w-3 h-3 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Builder</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setAiOpen(!aiOpen)}
+              className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+            <ThemeToggleDropdown />
+          </div>
+        </div>
+
+        {/* Mobile bottom action bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-30 glass-strong border-t border-[var(--border)] md:hidden safe-area-bottom">
+          <div className="flex items-center justify-around p-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
+              <Blocks className="w-5 h-5" />
+              <span className="text-xs">Components</span>
+            </button>
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
+              <Eye className="w-5 h-5" />
+              <span className="text-xs">Preview</span>
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
+              <Save className="w-5 h-5" />
+              <span className="text-xs">Save</span>
+            </button>
+            <button
+              onClick={handleDeployClick}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg bg-[var(--primary)] text-white"
+            >
+              <Rocket className="w-5 h-5" />
+              <span className="text-xs">Deploy</span>
+            </button>
+          </div>
+        </div>
 
         {/* Sidebar overlay for mobile */}
         <AnimatePresence>
@@ -634,28 +685,28 @@ contract Marketplace is ERC1155, Ownable {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 h-full w-[280px] glass-strong border-r border-[var(--border)] z-50 md:hidden flex flex-col"
+                className="fixed left-0 top-0 h-full w-[280px] sm:w-[320px] glass-strong border-r border-[var(--border)] z-50 md:hidden flex flex-col"
               >
                 <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors">
+                    <button onClick={() => navigate("/dashboard")} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors">
                       <ArrowLeft className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
-                        <Blocks className="w-3 h-3 text-white" />
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
+                        <Blocks className="w-4 h-4 text-white" />
                       </div>
-                      <span className="font-semibold text-sm">Builder</span>
+                      <span className="font-semibold">Builder</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => setShowTemplates(true)} className="p-1 hover:bg-secondary rounded" title="Templates">
+                    <button onClick={() => setShowTemplates(true)} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]" title="Templates">
                       <LayoutTemplate className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setShowShareDialog(true)} className="p-1 hover:bg-secondary rounded" title="Share">
+                    <button onClick={() => setShowShareDialog(true)} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]" title="Share">
                       <Share2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-secondary rounded">
+                    <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -837,7 +888,7 @@ contract Marketplace is ERC1155, Ownable {
           </AnimatePresence>
 
           {/* Canvas */}
-          <div className="flex-1 relative min-h-0 h-full" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
+          <div className="flex-1 relative min-h-0 h-full pb-16 md:pb-0" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
             <div className="absolute top-4 left-4 z-10 flex gap-2">
             <button
               onClick={undo}
