@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ReactFlow,
@@ -731,13 +731,21 @@ contract Marketplace is ERC1155, Ownable {
 
         <AnimatePresence>
           {aiOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "100vw", opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 border-l border-border glass-strong overflow-hidden shrink-0 z-50 md:relative md:w-80 lg:w-96"
-            >
+            <React.Fragment>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/30 z-40 md:hidden"
+                onClick={() => setAiOpen(false)}
+              />
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed right-0 top-0 bottom-0 w-[320px] md:w-80 lg:w-96 border-l border-border glass-strong overflow-hidden shrink-0 z-50 md:relative md:translate-x-0"
+              >
               <div className="flex items-center justify-between px-4 py-2 border-b border-border">
                 <div className="flex items-center gap-2">
                   <button
@@ -766,6 +774,7 @@ contract Marketplace is ERC1155, Ownable {
               </div>
               {creativeMode ? <CreativeMode /> : <AISidebar />}
             </motion.div>
+            </React.Fragment>
           )}
         </AnimatePresence>
 
