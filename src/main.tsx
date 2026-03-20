@@ -37,16 +37,6 @@ const polygonAmoy: Chain = {
   testnet: true,
 };
 
-interface ImportMetaEnv {
-  readonly VITE_PRIVY_APP_ID?: string;
-  readonly VITE_WALLET_CONNECT_PROJECT_ID?: string;
-  readonly VITE_API_URL?: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
 const WALLET_CONNECT_PROJECT_ID = (
   import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID ||
   ""
