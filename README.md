@@ -1,66 +1,161 @@
-## Foundry
+# RealFlow Studio
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+![Aleph Hackathon 2026](https://img.shields.io/badge/Hackathon-Aleph%202026-7C3AED)
+![Polygon](https://img.shields.io/badge/Blockchain-Polygon-8247E5)
+![AI](https://img.shields.io/badge/AI-OpenAI-10A37F)
 
-Foundry consists of:
+**AI-Driven No-Code RWA Marketplace Builder** - Build custom marketplaces for Real-World Assets in minutes, powered by AI.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Overview
 
-## Documentation
+RealFlow Studio enables non-technical users (real estate agents, artists, entrepreneurs) to create and launch custom marketplaces for tokenized RWAs like real estate, art, and commodities. Users can:
+- Drag-and-drop to design marketplace UI
+- Tokenize assets with AI-generated smart contracts
+- Deploy to Polygon in minutes
 
-https://book.getfoundry.sh/
+## Features
 
-## Usage
+### Core Features
+- **Drag & Drop Builder** - Visual marketplace designer with React Flow
+- **AI-Powered** - Auto-generate Solidity smart contracts with AI
+- **RWA Tokenization** - Support for ERC-721 and ERC-1155 tokens
+- **Instant Deploy** - Launch on Polygon in minutes
 
-### Build
+### AI Features
+- **Code Generation** - Generate smart contracts from natural language
+- **Creative Mode** - Themed UI generation (Luxury, Modern, Playful, Nature, Dark)
+- **Vibe Suggestions** - Fun, playful code comments and themes
 
-```shell
-$ forge build
+### Tech Stack
+- **Frontend**: React, TypeScript, Vite, TailwindCSS, React Flow
+- **Backend**: Express.js, Node.js
+- **Smart Contracts**: Solidity, OpenZeppelin, Hardhat/Foundry
+- **Blockchain**: Polygon Mumbai/Amoy
+- **AI**: OpenAI GPT-4
+- **Storage**: IPFS via Pinata
+
+## Quick Start
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- MetaMask or WalletConnect wallet
+
+### Frontend Setup
+```bash
+# Install dependencies
+npm install
+
+# Create .env.local (see .env.example)
+cp .env.example .env.local
+
+# Start development server
+npm run dev
 ```
 
-### Test
+### Backend Setup
+```bash
+cd backend
 
-```shell
-$ forge test
+# Install dependencies
+npm install
+
+# Create .env (see .env.example)
+cp .env.example .env
+
+# Start server
+npm run dev
 ```
 
-### Format
+### Environment Variables
 
-```shell
-$ forge fmt
+#### Frontend (.env.local)
+```env
+VITE_PRIVY_APP_ID=your_privy_app_id
+VITE_WALLET_CONNECT_PROJECT_ID=your_walletconnect_project_id
+VITE_API_URL=http://localhost:5000
 ```
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
+#### Backend (.env)
+```env
+PORT=5000
+OPENAI_API_KEY=your_openai_api_key
+PINATA_API_KEY=your_pinata_api_key
+PINATA_API_SECRET=your_pinata_api_secret
+POLYGON_AMOY_RPC_URL=https://polygon-amoy.infura.io/v3/your_project_id
 ```
 
-### Anvil
+## Project Structure
 
-```shell
-$ anvil
+```
+realflow-studio/
+├── src/                    # React frontend
+│   ├── components/         # UI components
+│   │   ├── builder/       # Drag-drop builder components
+│   │   ├── ai/           # AI components
+│   │   └── ui/           # Shadcn/ui components
+│   ├── hooks/             # React hooks
+│   ├── pages/             # Page components
+│   └── services/          # API services
+├── backend/               # Express backend
+│   └── src/
+│       ├── routes/        # API routes
+│       └── services/      # Business logic
+├── contracts/             # Solidity contracts
+└── docs/                  # Documentation
 ```
 
-### Deploy
+## API Endpoints
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+### Health
+```
+GET /api/health
 ```
 
-### Cast
-
-```shell
-$ cast <subcommand>
+### AI
+```
+POST /api/ai/generate-code   # Generate Solidity code
+POST /api/ai/optimize        # Optimize existing code
+GET  /api/ai/vibe-suggestion # Get theme suggestions
 ```
 
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+### IPFS
 ```
+POST /api/ipfs/upload        # Upload metadata
+GET  /api/ipfs/metadata/:cid # Get metadata
+POST /api/ipfs/pin/:cid      # Pin content
+```
+
+### Web3
+```
+GET /api/web3/contract/:address  # Get contract info
+GET /api/web3/balance/:address   # Get token balance
+GET /api/web3/factory             # Get factory info
+POST /api/web3/estimate-deployment # Estimate gas
+```
+
+## Testing
+
+```bash
+# Frontend tests
+npm run test
+
+# Backend tests
+cd backend && npm test
+```
+
+## Demo Flow
+
+1. **Login** - Connect wallet or sign up with email
+2. **Build** - Drag components to design marketplace
+3. **AI Assist** - Generate contracts with AI
+4. **Deploy** - One-click deploy to Polygon
+5. **Trade** - Start trading tokenized assets
+
+## Hackathon
+
+Built for **Aleph Hackathon 2026** - AI + RWA Track.
+
+## License
+
+MIT
