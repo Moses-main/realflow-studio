@@ -93,6 +93,7 @@ const Builder = () => {
   const [showTemplates, setShowTemplates] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified" | null>(null);
   const [testMode, setTestMode] = useState(false);
+  const [connectingWallet, setConnectingWallet] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -179,14 +180,28 @@ const Builder = () => {
     return `~${estimatedCost.toFixed(4)} MATIC (${Math.round(estimatedGas / 1e6)}M gas)`;
   };
 
-  const handleDeployClick = () => {
+  const handleDeployClick = async () => {
     if (!user.isWalletConnected || !user.address) {
+      setConnectingWallet(true);
       toast({
         title: "Wallet not connected",
-        description: "Please connect your wallet to deploy.",
-        variant: "destructive",
+        description: "Connecting wallet...",
       });
-      connectWallet();
+      try {
+        await connectWallet();
+        toast({
+          title: "Wallet connected",
+          description: "You can now deploy your marketplace.",
+        });
+      } catch (error) {
+        toast({
+          title: "Connection failed",
+          description: "Failed to connect wallet. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setConnectingWallet(false);
+      }
       return;
     }
     estimateGas();
@@ -691,9 +706,14 @@ contract Marketplace is ERC1155, Ownable {
                   <Button
                     className="w-full gap-2"
                     onClick={handleDeployClick}
-                    disabled={deploying || deployed}
+                    disabled={deploying || deployed || connectingWallet}
                   >
-                    {deploying ? (
+                    {connectingWallet ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : deploying ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Deploying...
@@ -778,9 +798,14 @@ contract Marketplace is ERC1155, Ownable {
             <Button
               className="w-full gap-2"
               onClick={handleDeployClick}
-              disabled={deploying || deployed}
+              disabled={deploying || deployed || connectingWallet}
             >
-              {deploying ? (
+              {connectingWallet ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : deploying ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Deploying...
