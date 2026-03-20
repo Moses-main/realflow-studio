@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Package, Plus, MoreVertical, ExternalLink, Trash2, Edit, 
-  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon
+  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -200,10 +200,15 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
 const MarketplaceList = () => {
   const { user, connectWallet } = useAuth();
   const [filter, setFilter] = useState<"all" | "live" | "draft">("all");
+  const [search, setSearch] = useState("");
 
-  const filteredMarketplaces = mockMarketplaces.filter(m => 
-    filter === "all" || m.status === filter
-  );
+  const filteredMarketplaces = mockMarketplaces.filter(m => {
+    const matchesFilter = filter === "all" || m.status === filter;
+    const matchesSearch = search === "" || 
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.address.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,22 +238,34 @@ const MarketplaceList = () => {
         </header>
 
         <div className="p-4 lg:p-8 space-y-6">
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {(["all", "live", "draft"] as const).map((f) => (
-              <Button
-                key={f}
-                variant={filter === f ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(f)}
-                className="capitalize whitespace-nowrap"
-              >
-                {f === "all" ? "All" : f === "live" ? "Live" : "Draft"}
-                <span className="ml-2 text-xs opacity-70">
-                  ({f === "all" ? mockMarketplaces.length : mockMarketplaces.filter(m => m.status === f).length})
-                </span>
-              </Button>
-            ))}
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search marketplaces..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {(["all", "live", "draft"] as const).map((f) => (
+                <Button
+                  key={f}
+                  variant={filter === f ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilter(f)}
+                  className="capitalize whitespace-nowrap"
+                >
+                  {f === "all" ? "All" : f === "live" ? "Live" : "Draft"}
+                  <span className="ml-2 text-xs opacity-70">
+                    ({f === "all" ? mockMarketplaces.length : mockMarketplaces.filter(m => m.status === f).length})
+                  </span>
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Stats Summary */}
