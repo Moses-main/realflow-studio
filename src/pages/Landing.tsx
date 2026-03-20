@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Blocks, Sparkles, Rocket, Shield, Zap, Globe } from "lucide-react";
+import { ArrowRight, Blocks, Sparkles, Rocket, Shield, Zap, Globe, Wallet, LogOut, User } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LanguageSwitcher } from "@/components/theme/LanguageSwitcher";
 import { useLanguage } from "@/components/theme/LanguageSwitcher";
+import { useAuth } from "@/hooks/useAuth";
 
 const features = [
   {
@@ -48,6 +49,7 @@ const templates = [
 export default function Landing() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user, login, connectWallet, disconnectWallet } = useAuth();
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
@@ -70,58 +72,128 @@ export default function Landing() {
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <ThemeToggle />
-            <button onClick={() => navigate("/dashboard")} className="btn-primary text-sm">
-              Open App
-            </button>
+            {user.isWalletConnected ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 surface rounded-lg">
+                  <div className="status-dot-success" />
+                  <span className="text-xs font-mono text-[var(--text-secondary)]">
+                    {user.address?.slice(0, 6)}...{user.address?.slice(-4)}
+                  </span>
+                </div>
+                <button onClick={() => navigate("/dashboard")} className="btn-primary text-sm">
+                  Open App
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button onClick={login} className="btn-ghost text-sm flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  Login
+                </button>
+                <button onClick={connectWallet} className="btn-primary text-sm flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5" />
+                  Connect
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="pt-32 pb-20 px-6 relative overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--primary-muted)]/20 to-transparent pointer-events-none" />
+        
+        <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-muted)] text-[var(--primary)] text-sm font-medium mb-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-muted)] text-[var(--primary)] text-sm font-medium mb-6"
+            >
               <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
               Built for Aleph Hackathon 2026
-            </div>
-            <h1 className="text-display text-3xl md:text-4xl lg:text-5xl mb-6 leading-tight">
+            </motion.div>
+            
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-display text-3xl md:text-4xl lg:text-5xl mb-6 leading-tight"
+            >
               {t("hero.title")}
-            </h1>
-            <p className="text-body text-lg mb-8 max-w-2xl mx-auto">
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="text-body text-lg mb-8 max-w-2xl mx-auto"
+            >
               {t("hero.subtitle")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button
-                onClick={() => navigate("/builder")}
-                className="btn-primary flex items-center gap-2 px-6 py-3 text-base"
-              >
-                {t("hero.cta")}
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => navigate("/marketplaces")}
-                className="btn-secondary flex items-center gap-2 px-6 py-3 text-base"
-              >
-                {t("hero.secondary")}
-              </button>
-            </div>
+            </motion.p>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            >
+              {user.isWalletConnected ? (
+                <>
+                  <button
+                    onClick={() => navigate("/builder")}
+                    className="btn-primary flex items-center gap-2 px-6 py-3 text-base"
+                  >
+                    {t("hero.cta")}
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => navigate("/marketplaces")}
+                    className="btn-secondary flex items-center gap-2 px-6 py-3 text-base"
+                  >
+                    {t("hero.secondary")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={connectWallet}
+                    className="btn-primary flex items-center gap-2 px-6 py-3 text-base"
+                  >
+                    <Wallet className="w-5 h-5" />
+                    Connect Wallet
+                  </button>
+                  <button
+                    onClick={login}
+                    className="btn-secondary flex items-center gap-2 px-6 py-3 text-base"
+                  >
+                    <User className="w-5 h-5" />
+                    Login with Email
+                  </button>
+                </>
+              )}
+            </motion.div>
           </motion.div>
 
           {/* Preview Image */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
             className="mt-16"
           >
-            <div className="surface p-2 rounded-xl">
-              <div className="bg-[var(--surface-elevated)] rounded-lg aspect-video flex items-center justify-center">
-                <div className="text-center p-8">
+            <div className="surface p-2 rounded-xl shadow-2xl shadow-[var(--primary)]/5">
+              <div className="bg-[var(--surface-elevated)] rounded-lg aspect-video flex items-center justify-center relative overflow-hidden">
+                {/* Grid pattern background */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--primary-rgb),0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--primary-rgb),0.03)_1px,transparent_1px)] bg-[size:20px_20px]" />
+                <div className="text-center p-8 relative z-10">
                   <Blocks className="w-16 h-16 text-[var(--primary)] mx-auto mb-4 opacity-50" />
                   <p className="text-[var(--text-muted)]">Builder Preview</p>
                 </div>
@@ -146,8 +218,9 @@ export default function Landing() {
               <motion.div
                 key={feature.title}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="card-hover"
               >
                 <div className="w-10 h-10 rounded-lg bg-[var(--primary-muted)] flex items-center justify-center mb-4">
@@ -176,8 +249,9 @@ export default function Landing() {
               <motion.div
                 key={template.name}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
                 onClick={() => navigate("/builder")}
                 className="card-hover cursor-pointer"
               >

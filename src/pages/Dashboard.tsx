@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   Blocks, Rocket, ArrowRight, Plus, Settings, Bell,
-  TrendingUp, Wallet, ExternalLink, Clock, BarChart3
+  TrendingUp, Wallet, ExternalLink, Clock, BarChart3, Home
 } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
@@ -42,7 +42,15 @@ export default function Dashboard() {
         {/* Header */}
         <header className="sticky top-0 z-30 bg-[var(--app-bg)]/80 backdrop-blur-md border-b border-[var(--border)]">
           <div className="flex items-center justify-between px-6 h-14">
-            <div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">Home</span>
+              </button>
+              <div className="w-px h-4 bg-[var(--border)]" />
               <h1 className="text-base font-semibold text-[var(--text-primary)]">Dashboard</h1>
             </div>
             <div className="flex items-center gap-3">

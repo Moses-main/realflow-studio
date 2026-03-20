@@ -12,6 +12,7 @@ interface SidebarProps {
 }
 
 const navItems = [
+  { icon: Home, label: "Home", path: "/" },
   { icon: Home, label: "Dashboard", path: "/dashboard" },
   { icon: Package, label: "Marketplaces", path: "/marketplaces" },
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
