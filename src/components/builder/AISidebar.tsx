@@ -91,7 +91,7 @@ const AISidebar = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
         <Sparkles className="w-4 h-4 text-primary" />
         <span className="font-semibold text-sm">AI Co-Builder</span>
         <button
@@ -106,7 +106,7 @@ const AISidebar = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.map((m, i) => (
           <div key={i} className={`${m.role === "user" ? "ml-8" : "mr-4"}`}>
             <div className={`rounded-xl p-3 text-sm ${
@@ -118,7 +118,7 @@ const AISidebar = () => {
             </div>
             {m.code && (
               <div className="mt-2 relative group">
-                <pre className="bg-background rounded-lg p-3 text-xs font-mono overflow-x-auto border border-border max-h-64 overflow-y-auto">
+                <pre className="bg-background rounded-lg p-3 text-xs font-mono overflow-x-auto border border-border max-h-48 overflow-y-auto">
                   <code>{m.code}</code>
                 </pre>
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -143,7 +143,7 @@ const AISidebar = () => {
         )}
       </div>
 
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-2 shrink-0">
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
           {suggestions.map((s) => (
             <button
@@ -158,16 +158,16 @@ const AISidebar = () => {
         </div>
       </div>
 
-      <div className="p-4 pt-0">
-        <div className="flex gap-2">
+      <div className="p-4 pt-0 shrink-0 bg-background/80 backdrop-blur-sm">
+        <div className="flex gap-2 items-center">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend(input)}
             placeholder="Ask AI to generate code..."
-            className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="flex-1 bg-secondary rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
           />
-          <Button size="sm" className="h-9 w-9 p-0" onClick={() => handleSend(input)} disabled={loading}>
+          <Button size="sm" className="h-11 w-11 p-0 shrink-0" onClick={() => handleSend(input)} disabled={loading || !input.trim()}>
             <Send className="w-4 h-4" />
           </Button>
         </div>
