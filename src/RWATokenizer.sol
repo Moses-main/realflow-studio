@@ -63,6 +63,30 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
     error UnauthorizedAccess(address caller);
 
     /**
+     * @notice Error thrown when address is blacklisted
+     * @param account Blacklisted address
+     */
+    error Blacklisted(address account);
+
+    /**
+     * @notice Error thrown when address is not whitelisted
+     * @param account Address not in whitelist
+     */
+    error NotWhitelisted(address account);
+
+    // Access control lists
+    mapping(address => bool) private _whitelist;
+    mapping(address => bool) private _blacklist;
+    bool private _whitelistEnabled;
+    bool private _blacklistEnabled;
+
+    // Events for access control changes
+    event AddressWhitelisted(address indexed account, bool status);
+    event AddressBlacklisted(address indexed account, bool status);
+    event WhitelistEnabled(bool enabled);
+    event BlacklistEnabled(bool enabled);
+
+    /**
      * @notice Maps token IDs to their IPFS metadata URIs
      */
     mapping(uint256 => string) private _tokenURIs;
@@ -82,34 +106,6 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
      * @param baseURI The base URI for metadata.
      */
 
-
-    /**
-     * @dev Mint a new token representing a Real-World Asset (RWA).
-     * @param to The address to receive the minted tokens.
-     * @param tokenId The unique ID of the token.
-     * @param amount The amount of tokens to mint (for fractional ownership).
-     * @param metadataURI The IPFS URI containing metadata for the token.
-     */
-    function mintRWA(
-        address to,
-        uint256 tokenId,
-        uint256 amount,
-        string memory metadataURI
-    ) external {
-        if (msg.sender != owner()) {
-            revert UnauthorizedAccess(msg.sender);
-        }
-        require(bytes(metadataURI).length > 0, "RWATokenizer: Metadata URI is required");
-        require(bytes(_tokenURIs[tokenId]).length == 0, "RWATokenizer: Token ID already exists");
-        if (msg.sender != owner()) {
-            revert UnauthorizedAccess(msg.sender);
-        }
-
-        _mint(to, tokenId, amount, "");
-        _setTokenURI(tokenId, metadataURI);
-
-        emit TokenMinted(to, tokenId, amount, metadataURI);
-    }
 
     /**
      * @dev Get the metadata URI for a specific token ID.
@@ -264,5 +260,150 @@ contract RWATokenizer is ERC1155, Ownable, IERC2981 {
                 address(this)
             )
         );
+    }
+
+    // ============ Whitelist/Blacklist Functions ============
+
+    /**
+     * @notice Add or remove address from whitelist
+     * @param account Address to whitelist/unwhitelist
+     * @param status true to whitelist, false to remove
+     */
+    function setWhitelist(address account, bool status) external onlyOwner {
+        require(account != address(0), "Invalid address");
+        _whitelist[account] = status;
+        emit AddressWhitelisted(account, status);
+    }
+
+    /**
+     * @notice Add or remove address from blacklist
+     * @param account Address to blacklist/unblacklist
+     * @param status true to blacklist, false to remove
+     */
+    function setBlacklist(address account, bool status) external onlyOwner {
+        require(account != address(0), "Invalid address");
+        _blacklist[account] = status;
+        emit AddressBlacklisted(account, status);
+    }
+
+    /**
+     * @notice Batch whitelist multiple addresses
+     * @param accounts Array of addresses to whitelist
+     * @param status Whitelist status
+     */
+    function batchWhitelist(address[] calldata accounts, bool status) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            if (accounts[i] != address(0)) {
+                _whitelist[accounts[i]] = status;
+                emit AddressWhitelisted(accounts[i], status);
+            }
+        }
+    }
+
+    /**
+     * @notice Batch blacklist multiple addresses
+     * @param accounts Array of addresses to blacklist
+     * @param status Blacklist status
+     */
+    function batchBlacklist(address[] calldata accounts, bool status) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            if (accounts[i] != address(0)) {
+                _blacklist[accounts[i]] = status;
+                emit AddressBlacklisted(accounts[i], status);
+            }
+        }
+    }
+
+    /**
+     * @notice Enable or disable whitelist requirement
+     * @param enabled true to require whitelist
+     */
+    function setWhitelistEnabled(bool enabled) external onlyOwner {
+        _whitelistEnabled = enabled;
+        emit WhitelistEnabled(enabled);
+    }
+
+    /**
+     * @notice Enable or disable blacklist
+     * @param enabled true to enable blacklist
+     */
+    function setBlacklistEnabled(bool enabled) external onlyOwner {
+        _blacklistEnabled = enabled;
+        emit BlacklistEnabled(enabled);
+    }
+
+    /**
+     * @notice Check if address is whitelisted
+     * @param account Address to check
+     * @return true if whitelisted
+     */
+    function isWhitelisted(address account) external view returns (bool) {
+        return _whitelist[account];
+    }
+
+    /**
+     * @notice Check if address is blacklisted
+     * @param account Address to check
+     * @return true if blacklisted
+     */
+    function isBlacklisted(address account) external view returns (bool) {
+        return _blacklist[account];
+    }
+
+    /**
+     * @notice Check if whitelist is enabled
+     * @return true if enabled
+     */
+    function whitelistEnabled() external view returns (bool) {
+        return _whitelistEnabled;
+    }
+
+    /**
+     * @notice Check if blacklist is enabled
+     * @return true if enabled
+     */
+    function blacklistEnabled() external view returns (bool) {
+        return _blacklistEnabled;
+    }
+
+    /**
+     * @dev Modifier to check blacklist/whitelist
+     */
+    modifier notBlacklisted(address account) {
+        if (_blacklistEnabled && _blacklist[account]) {
+            revert Blacklisted(account);
+        }
+        _;
+    }
+
+    /**
+     * @dev Modifier to check whitelist
+     */
+    modifier onlyWhitelisted(address account) {
+        if (_whitelistEnabled && !_whitelist[account]) {
+            revert NotWhitelisted(account);
+        }
+        _;
+    }
+
+    /**
+     * @dev Override mint to check access lists
+     */
+    function mintRWA(
+        address to,
+        uint256 tokenId,
+        uint256 amount,
+        string memory metadataURI
+    ) external onlyWhitelisted(to) notBlacklisted(to) {
+        if (msg.sender != owner()) {
+            revert UnauthorizedAccess(msg.sender);
+        }
+        require(bytes(metadataURI).length > 0, "RWATokenizer: Metadata URI is required");
+        require(bytes(_tokenURIs[tokenId]).length == 0, "RWATokenizer: Token ID already exists");
+
+        _mint(to, tokenId, amount, "");
+        _setTokenURI(tokenId, metadataURI);
+
+        emit TokenMinted(to, tokenId, amount, metadataURI);
     }
 }
