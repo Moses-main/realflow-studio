@@ -1,46 +1,98 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Blocks, Sparkles, Zap, Globe, ArrowRight, Wallet } from "lucide-react";
+import { Blocks, Sparkles, Zap, Globe, ArrowRight, Wallet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAuth } from "@/hooks/useAuth";
+
 const features = [
-  { icon: Blocks, title: "Drag & Drop Builder", desc: "Design your marketplace visually. No coding needed." },
-  { icon: Sparkles, title: "AI-Powered", desc: "Smart contracts auto-generated with AI optimization." },
-  { icon: Zap, title: "Instant Deploy", desc: "Launch on Polygon in minutes, not weeks." },
-  { icon: Globe, title: "Global Markets", desc: "Multi-language, multi-currency. Built for LATAM & Africa." },
+  {
+    icon: Blocks,
+    title: "Drag & Drop Builder",
+    desc: "Design your marketplace visually. No coding needed.",
+  },
+  {
+    icon: Sparkles,
+    title: "AI-Powered",
+    desc: "Smart contracts auto-generated with AI optimization.",
+  },
+  {
+    icon: Zap,
+    title: "Instant Deploy",
+    desc: "Launch on Polygon in minutes, not weeks.",
+  },
+  {
+    icon: Globe,
+    title: "Global Markets",
+    desc: "Multi-language, multi-currency. Built for LATAM & Africa.",
+  },
 ];
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, loginWithEmail, connectWallet, disconnectWallet, isInitialized } = useAuth();
+  const { authenticated } = usePrivy();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+
+  const handleWalletConnect = async () => {
+    if (isConnected) {
+      disconnect();
+      return;
+    }
+    await connectWallet();
+  };
+
+  const handlePrivyLogin = async () => {
+    if (authenticated) {
+      await disconnectWallet();
+      return;
+    }
+    await loginWithEmail();
+  };
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
-      {/* Nav */}
       <nav className="fixed top-0 w-full z-50 glass-strong">
         <div className="container mx-auto flex items-center justify-between h-16 px-6">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Blocks className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg tracking-tight">RealFlow Studio</span>
+            <span className="font-bold text-lg tracking-tight">
+              RealFlow Studio
+            </span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard")}
+            >
               Dashboard
             </Button>
-            <Button size="sm" className="gap-2" onClick={() => navigate("/dashboard")}>
+            <Button size="sm" className="gap-2" onClick={handleWalletConnect}>
               <Wallet className="w-4 h-4" />
-              Connect Wallet
+              {isConnected && address
+                ? `Disconnect ${address.slice(0, 6)}...`
+                : "Connect Wallet"}
+            </Button>
+            <Button size="sm" className="gap-2" onClick={handlePrivyLogin}>
+              <Sparkles className="w-4 h-4" />
+              {authenticated ? "Sign Out" : "Sign Up with Email"}
             </Button>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
       <section className="relative pt-32 pb-20 px-6">
-        {/* Glow orbs */}
         <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="absolute top-40 right-1/4 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: "1s" }} />
+        <div
+          className="absolute top-40 right-1/4 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse-glow"
+          style={{ animationDelay: "1s" }}
+        />
 
         <div className="container mx-auto text-center relative z-10">
           <motion.div
@@ -60,16 +112,25 @@ const Index = () => {
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              Tokenize real estate, art & commodities. Drag-and-drop your marketplace,
-              let AI handle the smart contracts. Deploy in minutes.
+              Tokenize real estate, art & commodities. Drag-and-drop your
+              marketplace, let AI handle the smart contracts. Deploy in minutes.
             </p>
 
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Button size="lg" className="gap-2 text-base glow-primary" onClick={() => navigate("/builder")}>
+              <Button
+                size="lg"
+                className="gap-2 text-base glow-primary"
+                onClick={() => navigate("/builder")}
+              >
                 Start Building
                 <ArrowRight className="w-5 h-5" />
               </Button>
-              <Button variant="outline" size="lg" className="gap-2 text-base" onClick={() => navigate("/dashboard")}>
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 text-base"
+                onClick={() => navigate("/dashboard")}
+              >
                 View Demo
               </Button>
             </div>
@@ -77,7 +138,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features */}
       <section className="py-20 px-6">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -93,14 +153,15 @@ const Index = () => {
                   <f.icon className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {f.desc}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Stats */}
       <section className="py-16 px-6">
         <div className="container mx-auto glass rounded-2xl p-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -111,7 +172,9 @@ const Index = () => {
               { val: "15+", label: "Countries Supported" },
             ].map((s) => (
               <div key={s.label}>
-                <div className="text-3xl font-bold text-gradient mb-1">{s.val}</div>
+                <div className="text-3xl font-bold text-gradient mb-1">
+                  {s.val}
+                </div>
                 <div className="text-sm text-muted-foreground">{s.label}</div>
               </div>
             ))}
@@ -119,7 +182,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-10 px-6 border-t border-border">
         <div className="container mx-auto flex items-center justify-between text-sm text-muted-foreground">
           <span>© 2026 RealFlow Studio • Aleph Hackathon</span>
