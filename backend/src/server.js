@@ -26,14 +26,26 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/health', healthRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/ipfs', ipfsRouter);
 app.use('/api/web3', web3Router);
 
+// 404 handler for unknown routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
 app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Invalid JSON payload' });
+  }
   console.error('Error:', err.message);
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error',
@@ -41,7 +53,29 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+let server;
+
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  if (server) {
+    server.close(() => {
+      console.log('HTTP server closed. Exiting process.');
+      process.exit(0);
+    });
+    
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+server = app.listen(PORT, () => {
   console.log(`RealFlow Studio API running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
 });
