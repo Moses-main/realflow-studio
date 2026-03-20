@@ -3,38 +3,38 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   Blocks, Rocket, ArrowRight, Plus, Settings, Bell,
-  TrendingUp, Wallet, ExternalLink, Clock, BarChart3, Home
+  TrendingUp, Wallet, ExternalLink, Clock, BarChart3, Home,
+  Loader2, RefreshCw
 } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/components/theme/LanguageSwitcher";
+import { useStats, useMarketplaces, useTemplates } from "@/hooks/useData";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, connectWallet } = useAuth();
   const { t } = useLanguage();
   
-  const stats = [
-    { label: t("dashboard.stats.totalValue"), value: "$124,500", change: "+12.5%", icon: TrendingUp, positive: true },
-    { label: t("dashboard.stats.transactions"), value: "1,284", change: "+8.2%", icon: TrendingUp, positive: true },
-    { label: t("dashboard.stats.nfts"), value: "892", change: "+15.3%", icon: TrendingUp, positive: true },
-    { label: t("dashboard.stats.fee"), value: "0.5%", change: null, icon: Wallet, positive: true },
-  ];
+  // Dynamic data from hooks
+  const { data: statsData, loading: statsLoading, refetch: refetchStats } = useStats();
+  const { data: marketplacesData, loading: marketplacesLoading, refetch: refetchMarketplaces } = useMarketplaces();
+  const { data: templatesData, loading: templatesLoading, refetch: refetchTemplates } = useTemplates();
 
-  const recentMarketplaces = [
-    { name: "Real Estate Fund #1", status: "active", txs: 234, value: "$45,200", date: "2h ago" },
-    { name: "Art Collection", status: "active", txs: 89, value: "$12,500", date: "5h ago" },
-    { name: "Commodity Tokens", status: "pending", txs: 0, value: "$0", date: "1d ago" },
-    { name: "Music Rights NFTs", status: "active", txs: 156, value: "$28,300", date: "2d ago" },
-  ];
+  // Map icon strings to components
+  const iconMap: Record<string, React.ElementType> = {
+    TrendingUp,
+    Wallet,
+  };
 
-  const templates = [
-    { name: "NFT Marketplace", desc: "Basic trading", components: 5 },
-    { name: "Creator Portfolio", desc: "Showcase works", components: 4 },
-    { name: "Digital Gallery", desc: "Browse collections", components: 4 },
-    { name: "Full Platform", desc: "All features", components: 6 },
-  ];
+  const stats = statsData?.map(s => ({
+    ...s,
+    icon: iconMap[s.icon] || TrendingUp,
+  })) || [];
+
+  const recentMarketplaces = marketplacesData || [];
+  const templates = templatesData || [];
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex">
@@ -94,7 +94,18 @@ const Dashboard = () => {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {stats.map((stat, index) => (
+            {statsLoading ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="card animate-pulse">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="h-3 w-20 bg-[var(--surface-elevated)] rounded" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--surface-elevated)]" />
+                  </div>
+                  <div className="h-7 w-24 bg-[var(--surface-elevated)] rounded mb-2" />
+                  <div className="h-3 w-16 bg-[var(--surface-elevated)] rounded" />
+                </div>
+              ))
+            ) : stats.length > 0 ? stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
@@ -115,7 +126,9 @@ const Dashboard = () => {
                   </span>
                 )}
               </motion.div>
-            ))}
+            )) : (
+              <div className="col-span-4 text-center py-8 text-[var(--text-muted)]">No stats available</div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -129,7 +142,21 @@ const Dashboard = () => {
               </div>
               
               <div className="space-y-2">
-                {recentMarketplaces.map((marketplace) => (
+                {marketplacesLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg surface-hover animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-[var(--surface-elevated)]" />
+                        <div>
+                          <div className="h-4 w-24 bg-[var(--surface-elevated)] rounded mb-1" />
+                          <div className="h-3 w-16 bg-[var(--surface-elevated)] rounded" />
+                        </div>
+                      </div>
+                      <div className="h-6 w-16 bg-[var(--surface-elevated)] rounded" />
+                    </div>
+                  ))
+                ) : recentMarketplaces.length > 0 ? (
+                  recentMarketplaces.map((marketplace) => (
                   <div
                     key={marketplace.name}
                     className="flex items-center justify-between p-3 rounded-lg surface-hover cursor-pointer"
@@ -152,9 +179,12 @@ const Dashboard = () => {
                         {marketplace.status}
                       </div>
                       <div className="text-xs text-[var(--text-muted)]">{marketplace.txs} txns • {marketplace.value}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-[var(--text-muted)] text-sm">No marketplaces found</div>
+                )}
               </div>
             </div>
 
@@ -162,19 +192,33 @@ const Dashboard = () => {
             <div className="surface p-5">
               <h3 className="text-subheading mb-4">Quick Start</h3>
               <div className="space-y-3">
-                {templates.map((template) => (
-                  <button
-                    key={template.name}
-                    onClick={() => navigate("/builder")}
-                    className="w-full p-3 rounded-lg surface-hover text-left flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-[var(--text-primary)]">{template.name}</div>
-                      <div className="text-xs text-[var(--text-muted)]">{template.desc} • {template.components} components</div>
+                {templatesLoading ? (
+                  [...Array(4)].map((_, i) => (
+                    <div key={i} className="w-full p-3 rounded-lg surface-hover animate-pulse flex items-center justify-between">
+                      <div>
+                        <div className="h-4 w-24 bg-[var(--surface-elevated)] rounded mb-1" />
+                        <div className="h-3 w-32 bg-[var(--surface-elevated)] rounded" />
+                      </div>
+                      <div className="w-4 h-4 bg-[var(--surface-elevated)] rounded" />
                     </div>
-                    <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
-                  </button>
-                ))}
+                  ))
+                ) : templates.length > 0 ? (
+                  templates.slice(0, 4).map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => navigate("/builder")}
+                      className="w-full p-3 rounded-lg surface-hover text-left flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="text-sm font-medium text-[var(--text-primary)]">{template.name}</div>
+                        <div className="text-xs text-[var(--text-muted)]">{template.desc} • {template.components} components</div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-[var(--text-muted)] text-sm">No templates available</div>
+                )}
               </div>
               
               <button
