@@ -13,6 +13,9 @@ export async function generateCode({ description, contractType = 'custom', vibeM
     return generateMockCode(description, contractType, vibeMode);
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
   try {
     const contractTemplates = {
       token: `// SPDX-License-Identifier: MIT
@@ -58,8 +61,11 @@ ${vibeMode ? "Include playful comments like '// Vibing with gas savings!'" : ""}
         ],
         max_tokens: 2000,
         temperature: 0.7
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error('AI service unavailable');
@@ -68,6 +74,10 @@ ${vibeMode ? "Include playful comments like '// Vibing with gas savings!'" : ""}
     const data = await response.json();
     return data.choices[0]?.message?.content || contractTemplates[contractType];
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('AI request timed out');
+    }
     console.error('AI generation error:', error);
     return generateMockCode(description, contractType, vibeMode);
   }
