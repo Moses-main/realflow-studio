@@ -160,12 +160,18 @@ const AISidebar = () => {
 
       <div className="p-4 pt-0 shrink-0 bg-background/80 backdrop-blur-sm">
         <div className="flex gap-2 items-center">
-          <input
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend(input)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend(input);
+              }
+            }}
             placeholder="Ask AI to generate code..."
-            className="flex-1 bg-secondary rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+            rows={1}
+            className="flex-1 bg-secondary rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] max-h-32 resize-none"
           />
           <Button size="sm" className="h-11 w-11 p-0 shrink-0" onClick={() => handleSend(input)} disabled={loading || !input.trim()}>
             <Send className="w-4 h-4" />
