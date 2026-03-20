@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye
+  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye, Share2, Link
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +87,7 @@ const Builder = () => {
   const [githubUsername, setGithubUsername] = useState("");
   const [exportingToGithub, setExportingToGithub] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const idCounter = useRef(4);
   const draggedItem = useRef<PaletteItem | null>(null);
@@ -557,9 +558,14 @@ contract Marketplace is ERC1155, Ownable {
                       <span className="font-semibold text-sm">Builder</span>
                     </div>
                   </div>
-                  <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-secondary rounded">
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setShowShareDialog(true)} className="p-1 hover:bg-secondary rounded" title="Share">
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-secondary rounded">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -1266,6 +1272,92 @@ contract Marketplace is ERC1155, Ownable {
                     <Rocket className="w-4 h-4 mr-2" />
                     Deploy This
                   </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showShareDialog && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowShareDialog(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="glass-strong rounded-xl max-w-md w-full p-6 border border-border"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Share2 className="w-5 h-5" />
+                    Share Marketplace
+                  </h3>
+                  <button onClick={() => setShowShareDialog(false)} className="p-1 hover:bg-secondary rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Shareable Link</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`}
+                        className="flex-1 p-2 rounded-lg bg-secondary border border-border text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`);
+                          toast({ title: "Copied!", description: "Link copied to clipboard" });
+                        }}
+                      >
+                        <Link className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-sm font-medium mb-2">Quick Share</p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          const text = `Check out my RealFlow Marketplace with ${nodes.length} components!`;
+                          const url = `${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`;
+                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
+                        }}
+                      >
+                        Share on X
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`);
+                          toast({ title: "Copied!", description: "Link copied to clipboard" });
+                        }}
+                      >
+                        Copy Link
+                      </Button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Share this link to let others view or import your marketplace design.
+                  </p>
                 </div>
               </motion.div>
             </motion.div>
