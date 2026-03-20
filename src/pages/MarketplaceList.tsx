@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Package, Plus, MoreVertical, ExternalLink, Trash2, Edit, 
-  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon, Search, Building2, Palette, Coins
+  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon, Search, Building2, Palette, Coins, Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,11 +65,19 @@ const mockMarketplaces = [
 const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces[0] }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(marketplace.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareLink = () => {
+    const url = `${window.location.origin}/marketplaces/${marketplace.id}`;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   return (
@@ -108,6 +116,10 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={shareLink}>
+              <Share2 className="w-4 h-4 mr-2" />
+              {linkCopied ? "Link Copied!" : "Share Link"}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setShowDetails(true)}>
               <Eye className="w-4 h-4 mr-2" />
               View Details
