@@ -30,7 +30,7 @@ RealFlow Studio enables non-technical users (real estate agents, artists, entrep
 - **Frontend**: React, TypeScript, Vite, TailwindCSS, React Flow
 - **Backend**: Express.js, Node.js
 - **Smart Contracts**: Solidity, OpenZeppelin, Hardhat/Foundry
-- **Blockchain**: Polygon Mumbai/Amoy
+- **Blockchain**: Polygon Amoy (chain ID: 80002)
 - **AI**: OpenAI GPT-4
 - **Storage**: IPFS via Pinata
 
@@ -151,6 +151,16 @@ cd backend && npm test
 3. **AI Assist** - Generate contracts with AI
 4. **Deploy** - One-click deploy to Polygon
 5. **Trade** - Start trading tokenized assets
+
+## Deployed Contracts (Polygon Amoy Testnet)
+
+### RWATokenizer
+- **Address**: [0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be](https://amoy.polygonscan.com/address/0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be)
+- **Purpose**: ERC-1155 token for fractional RWA minting
+
+### MarketplaceFactory
+- **Address**: [0x802A6843516f52144b3F1D04E5447A085d34aF37](https://amoy.polygonscan.com/address/0x802A6843516f52144b3F1D04E5447A085d34aF37)
+- **Purpose**: Factory for cloning RWA tokenizers
 
 ## Hackathon
 
