@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import {
-  TrendingUp, TrendingDown, Users, Package, DollarSign,
+  TrendingUp, Users, Package, DollarSign,
   BarChart3, PieChart, Activity, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
