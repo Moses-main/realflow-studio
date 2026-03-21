@@ -50,6 +50,31 @@ import { BezierEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
+import { useWallet, shortenAddress } from "@/hooks/useWallet";
+import { WalletModal } from "@/components/wallet/WalletModal";
+
+// Wallet Button Component
+function WalletButton() {
+  const { address, isConnected, isConnecting, connect, disconnect, balance } = useWallet();
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => isConnected ? disconnect() : setShowModal(true)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] transition-colors"
+        disabled={isConnecting}
+      >
+        <Wallet className="w-4 h-4" />
+        <span className="text-xs font-mono">
+          {isConnecting ? "..." : isConnected ? shortenAddress(address) : "Connect"}
+        </span>
+        {isConnected && <ChevronDown className="w-3 h-3" />}
+      </button>
+      <WalletModal isOpen={showModal} onClose={() => setShowModal(false)} />
+    </>
+  );
+}
 
 // Node types - maps component types to React Flow node components
 const nodeTypes = { custom: CustomNode };
@@ -592,11 +617,7 @@ function BuilderCanvas() {
             </button>
 
             {/* Wallet */}
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)]">
-              <Wallet className="w-4 h-4" />
-              <span className="text-xs font-mono">0x1234...5678</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
+            <WalletButton />
 
             {/* Toggle Right Panel */}
             <button
@@ -725,6 +746,7 @@ function BuilderCanvas() {
             <Button variant="outline" size="sm" onClick={handleClear}>
               <Trash2 className="w-4 h-4 mr-1" /> Clear
             </Button>
+            <WalletButton />
           </div>
           <Button
             variant="default"

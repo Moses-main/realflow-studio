@@ -4,46 +4,8 @@ import {
   Play, CheckCircle, AlertCircle, Loader2,
   Wallet, Eye, ExternalLink
 } from "lucide-react";
-import { useAccount, useBalance, useBlockNumber, useContractWrite, usePrepareContractWrite } from "wagmi";
+import { useWallet, shortenAddress } from "@/hooks/useWallet";
 import type { Node } from "@xyflow/react";
-
-const MARKETPLACE_ADDRESS = (import.meta.env.VITE_MARKETPLACE_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`;
-const ERC1155_ADDRESS = (import.meta.env.VITE_ERC1155_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`;
-
-const MARKETPLACE_ABI = [
-  {
-    inputs: [
-      { name: "assetId", type: "uint256" },
-      { name: "price", type: "uint256" },
-    ],
-    name: "createListing",
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [{ name: "listingId", type: "uint256" }],
-    name: "purchaseListing",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-] as const;
-
-const ERC1155_ABI = [
-  {
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "id", type: "uint256" },
-      { name: "amount", type: "uint256" },
-      { name: "data", type: "bytes" },
-    ],
-    name: "mint",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
 
 interface SimulationStep {
   id: string;
@@ -59,10 +21,8 @@ interface TestPanelProps {
 }
 
 export function TestPanel({ nodes, onClose }: TestPanelProps) {
-  // Real wallet data from wagmi 1.x
-  const { address, isConnected } = useAccount();
-  const { data: balance } = useBalance({ address });
-  const { data: blockNumber } = useBlockNumber();
+  // Real wallet data from useWallet hook
+  const { address, isConnected, balance, connect, blockNumber } = useWallet();
 
   const [isRunning, setIsRunning] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -98,17 +58,6 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
   const [steps, setSteps] = useState<SimulationStep[]>(getSteps());
   const [logs, setLogs] = useState<string[]>([]);
 
-  // Wagmi 1.x contract hooks for ERC1155 minting
-  const { config: mintConfig } = usePrepareContractWrite({
-    address: ERC1155_ADDRESS !== "0x0000000000000000000000000000000000000000" ? ERC1155_ADDRESS : undefined,
-    abi: ERC1155_ABI,
-    functionName: "mint",
-    args: [address || "0x0000000000000000000000000000000000000000", BigInt(1), BigInt(1), "0x"],
-    enabled: !!address && ERC1155_ADDRESS !== "0x0000000000000000000000000000000000000000",
-  });
-
-  const { write: writeMint, isLoading: isMinting } = useContractWrite(mintConfig);
-
   const uploadToIPFS = useCallback(async (): Promise<string> => {
     addLog("Uploading to IPFS...");
     const cid = `Qm${Date.now()}${Math.random().toString(36).slice(2, 15)}`;
@@ -124,18 +73,9 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
         hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
       } 
       else if (stepId === "mint") {
-        if (writeMint && !isMinting) {
-          try {
-            const result = await writeMint();
-            hash = result.hash;
-          } catch {
-            await new Promise(r => setTimeout(r, 2000));
-            hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
-          }
-        } else {
-          await new Promise(r => setTimeout(r, 2000));
-          hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
-        }
+        // Simulate minting on blockchain
+        await new Promise(r => setTimeout(r, 2000));
+        hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
       }
       else if (stepId === "list") {
         await new Promise(r => setTimeout(r, 2000));
@@ -247,15 +187,15 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-[var(--primary)]" />
             <span className="text-sm font-medium text-[var(--text-primary)]">
-              {balance?.formatted ? `${parseFloat(balance.formatted).toFixed(4)} ${balance.symbol}` : "0.0000 MATIC"}
+              {balance ? `${parseFloat(balance).toFixed(4)} MATIC` : "0.0000 MATIC"}
             </span>
           </div>
           <div className="text-xs text-[var(--text-muted)] mt-1 font-mono">
-            {address ? `${address.slice(0, 10)}...${address.slice(-6)}` : "Not connected"}
+            {address ? shortenAddress(address) : "Not connected"}
           </div>
           {blockNumber && (
             <div className="text-xs text-[var(--text-muted)] mt-1">
-              Block: #{blockNumber.toString()}
+              Block: #{blockNumber}
             </div>
           )}
         </div>
@@ -328,8 +268,8 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
           </div>
         )}
         <button
-          onClick={runSimulation}
-          disabled={isRunning || !isConnected || nodes.length === 0}
+          onClick={!isConnected ? connect : runSimulation}
+          disabled={isRunning || (isConnected && nodes.length === 0)}
           className={`w-full btn-primary flex items-center justify-center gap-2 ${
             allPassed ? "bg-[var(--success)] hover:bg-[var(--success)]/90" : ""
           }`}
@@ -347,7 +287,7 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
           ) : !isConnected ? (
             <>
               <Wallet className="w-4 h-4" />
-              Connect Wallet
+              Connect Wallet to Test
             </>
           ) : nodes.length === 0 ? (
             <>
