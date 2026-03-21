@@ -4,7 +4,8 @@ import {
   Play, CheckCircle, AlertCircle, Loader2,
   Wallet, Eye, ExternalLink
 } from "lucide-react";
-import { useWallet, shortenAddress } from "@/hooks/useWallet";
+import { useAuth, shortenAddress } from "@/hooks/useAuth";
+import { LoginModal } from "@/components/auth/LoginModal";
 import type { Node } from "@xyflow/react";
 
 interface SimulationStep {
@@ -21,8 +22,14 @@ interface TestPanelProps {
 }
 
 export function TestPanel({ nodes, onClose }: TestPanelProps) {
-  // Real wallet data from useWallet hook
-  const { address, isConnected, balance, connect, blockNumber } = useWallet();
+  // Real wallet data from Privy
+  const { user, login, ready } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
+  
+  const address = user.address;
+  const isConnected = user.isAuthenticated;
+  const balance = "0.0000"; // Will be fetched from blockchain
+  const blockNumber = null; // Will be fetched from blockchain
 
   const [isRunning, setIsRunning] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -267,40 +274,43 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
             Est. Gas: {gasEstimate}
           </div>
         )}
-        <button
-          onClick={!isConnected ? connect : runSimulation}
-          disabled={isRunning || (isConnected && nodes.length === 0)}
-          className={`w-full btn-primary flex items-center justify-center gap-2 ${
-            allPassed ? "bg-[var(--success)] hover:bg-[var(--success)]/90" : ""
-          }`}
-        >
-          {isRunning ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Running Simulation...
-            </>
-          ) : allPassed ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              All Tests Passed
-            </>
-          ) : !isConnected ? (
-            <>
-              <Wallet className="w-4 h-4" />
-              Connect Wallet to Test
-            </>
-          ) : nodes.length === 0 ? (
-            <>
-              <Eye className="w-4 h-4" />
-              Add Components First
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" />
-              Run Simulation ({getSteps().length} steps)
-            </>
-          )}
-        </button>
+        <>
+          <button
+            onClick={!isConnected ? () => setShowLogin(true) : runSimulation}
+            disabled={isRunning || (isConnected && nodes.length === 0) || !ready}
+            className={`w-full btn-primary flex items-center justify-center gap-2 ${
+              allPassed ? "bg-[var(--success)] hover:bg-[var(--success)]/90" : ""
+            }`}
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Running Simulation...
+              </>
+            ) : allPassed ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                All Tests Passed
+              </>
+            ) : !isConnected ? (
+              <>
+                <Wallet className="w-4 h-4" />
+                Sign In to Test
+              </>
+            ) : nodes.length === 0 ? (
+              <>
+                <Eye className="w-4 h-4" />
+                Add Components First
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Run Simulation ({getSteps().length} steps)
+              </>
+            )}
+          </button>
+          <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
+        </>
         
         <button
           onClick={() => {

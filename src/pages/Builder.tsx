@@ -50,28 +50,36 @@ import { BezierEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
-import { useWallet, shortenAddress } from "@/hooks/useWallet";
-import { WalletModal } from "@/components/wallet/WalletModal";
+import { useAuth, shortenAddress } from "@/hooks/useAuth";
+import { LoginModal } from "@/components/auth/LoginModal";
 
-// Wallet Button Component
+// Wallet Button Component using Privy
 function WalletButton() {
-  const { address, isConnected, isConnecting, connect, disconnect, balance } = useWallet();
+  const { user, logout, ready } = useAuth();
   const [showModal, setShowModal] = useState(false);
+
+  if (!ready) {
+    return (
+      <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)]" disabled>
+        <Wallet className="w-4 h-4 animate-pulse" />
+        <span className="text-xs">Loading...</span>
+      </button>
+    );
+  }
 
   return (
     <>
       <button
-        onClick={() => isConnected ? disconnect() : setShowModal(true)}
+        onClick={() => user.isAuthenticated ? logout() : setShowModal(true)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] transition-colors"
-        disabled={isConnecting}
       >
         <Wallet className="w-4 h-4" />
         <span className="text-xs font-mono">
-          {isConnecting ? "..." : isConnected ? shortenAddress(address) : "Connect"}
+          {user.isAuthenticated ? shortenAddress(user.address) : "Connect"}
         </span>
-        {isConnected && <ChevronDown className="w-3 h-3" />}
+        {user.isAuthenticated && <ChevronDown className="w-3 h-3" />}
       </button>
-      <WalletModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      <LoginModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </>
   );
 }
