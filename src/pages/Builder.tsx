@@ -36,7 +36,8 @@ import {
   FlaskConical, 
   Copy, 
   Clipboard, 
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -312,6 +313,76 @@ function BuilderCanvas() {
     setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
     setSelectedNodeIds(nodes.map((n) => n.id));
   }, [nodes, setNodes]);
+
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploymentStatus, setDeploymentStatus] = useState<string | null>(null);
+
+  const handleDeploy = useCallback(async () => {
+    if (nodes.length === 0) {
+      toast({
+        title: "Cannot deploy",
+        description: "Add components to the canvas first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const nodeTypes = [...new Set(nodes.map((n) => n.data?.componentType))];
+    const hasRequiredComponents = nodeTypes.some(
+      (type) => ["mintButton", "listingGrid", "buyButton"].includes(type)
+    );
+
+    if (!hasRequiredComponents) {
+      toast({
+        title: "Missing components",
+        description: "Add mint, listing, or buy components to deploy",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeploying(true);
+    setDeploymentStatus("Generating contract code...");
+
+    try {
+      const flowData = {
+        nodes,
+        edges,
+        components: nodeTypes,
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(flowData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Deployment failed");
+      }
+
+      const result = await response.json();
+
+      setDeploymentStatus("Deploying to blockchain...");
+
+      toast({
+        title: "Deployment successful!",
+        description: `Contract deployed at ${result.address?.slice(0, 10)}...`,
+      });
+
+      localStorage.setItem("deployed-contract", JSON.stringify(result));
+    } catch (error) {
+      console.error("Deployment error:", error);
+      toast({
+        title: "Deployment failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeploying(false);
+      setDeploymentStatus(null);
+    }
+  }, [nodes, edges, toast]);
 
   // =====================
   // ZOOM CONTROLS
@@ -624,10 +695,18 @@ function BuilderCanvas() {
           <Button
             variant="default"
             size="sm"
-            disabled={nodes.length === 0}
+            disabled={nodes.length === 0 || isDeploying}
+            onClick={handleDeploy}
             className="bg-gradient-to-r from-[var(--primary)] to-indigo-500"
           >
-            Deploy Marketplace
+            {isDeploying ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                {deploymentStatus || "Deploying..."}
+              </>
+            ) : (
+              "Deploy Marketplace"
+            )}
           </Button>
         </div>
       </div>
