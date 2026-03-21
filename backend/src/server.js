@@ -8,6 +8,7 @@ import { ipfsRouter } from './routes/ipfs.js';
 import { web3Router } from './routes/web3.js';
 import { healthRouter } from './routes/health.js';
 import { deployRouter } from './routes/deploy.js';
+import { marketplaceRouter } from './routes/marketplace.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -69,6 +70,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/ipfs', ipfsRouter);
 app.use('/api/web3', web3Router);
 app.use('/api/deploy', deployRouter);
+app.use('/api/marketplaces', marketplaceRouter);
 
 // 404 handler for unknown routes
 app.use((req, res) => {
