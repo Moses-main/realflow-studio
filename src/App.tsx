@@ -17,6 +17,14 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { LanguageProvider } from "@/components/theme/LanguageSwitcher";
 import EntryScreen from "./components/EntryScreen";
 import { Loader2 } from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth";
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { ready, authenticated } = usePrivy();
+  if (!ready) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!authenticated) return <EntryScreen />;
+  return <>{children}</>;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,7 +135,7 @@ const App = () => {
             <KeyboardShortcutsHandler />
             <Routes>
               <Route path="/" element={<Navigate to="/canvas" replace />} />
-              <Route path="/canvas" element={<ErrorBoundary><Builder /></ErrorBoundary>} />
+              <Route path="/canvas" element={<ProtectedRoute><ErrorBoundary><Builder /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
               <Route path="/marketplaces" element={<ErrorBoundary><MarketplaceList /></ErrorBoundary>} />
               <Route path="/marketplaces/:id" element={<ErrorBoundary><MarketplaceDetail /></ErrorBoundary>} />
