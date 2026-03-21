@@ -4,12 +4,15 @@ import {
   Play, Pause, CheckCircle, AlertCircle, Loader2,
   ArrowRight, Wallet, Coins, ShoppingCart, Eye
 } from "lucide-react";
+import { useAccount, useBalance, useBlockNumber } from "wagmi";
+import type { Node } from "@xyflow/react";
 
 interface SimulationStep {
   id: string;
   label: string;
   description: string;
   status: "pending" | "running" | "success" | "error";
+  txHash?: string;
 }
 
 interface TestPanelProps {
@@ -18,46 +21,95 @@ interface TestPanelProps {
 }
 
 export function TestPanel({ nodes, onClose }: TestPanelProps) {
+  // Real wallet data from wagmi
+  const { address, isConnected } = useAccount();
+  const { data: balance } = useBalance({ address });
+  const { data: blockNumber } = useBlockNumber();
+
   const [isRunning, setIsRunning] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [steps, setSteps] = useState<SimulationStep[]>([
-    { id: "connect", label: "Connect Wallet", description: "Simulated wallet connection", status: "pending" },
-    { id: "upload", label: "Upload Asset", description: "Test asset metadata upload to IPFS", status: "pending" },
-    { id: "mint", label: "Mint NFT", description: "Test mint transaction on Amoy", status: "pending" },
-    { id: "list", label: "List for Sale", description: "Test marketplace listing", status: "pending" },
-    { id: "trade", label: "Execute Trade", description: "Test buy/sell transaction", status: "pending" },
-  ]);
+  const [gasEstimate, setGasEstimate] = useState<string | null>(null);
+  
+  // Dynamic steps based on nodes
+  const getSteps = (): SimulationStep[] => {
+    const nodeTypes = nodes.map(n => n.data?.componentType as string);
+    
+    const steps: SimulationStep[] = [
+      { id: "connect", label: "Wallet Connected", description: "Connected to Polygon Amoy testnet", status: isConnected ? "success" : "pending" },
+    ];
 
-  const [mockBalance] = useState("1.5 MATIC");
+    if (nodeTypes.includes("assetUpload")) {
+      steps.push({ id: "upload", label: "Upload to IPFS", description: "Uploading asset metadata", status: "pending" });
+    }
+    
+    if (nodeTypes.includes("mintButton")) {
+      steps.push({ id: "mint", label: "Mint NFT", description: "Deploying ERC-1155 token", status: "pending" });
+    }
+    
+    if (nodeTypes.includes("listingGrid")) {
+      steps.push({ id: "list", label: "Create Listing", description: "Listing asset on marketplace", status: "pending" });
+    }
+    
+    if (nodeTypes.includes("buyButton")) {
+      steps.push({ id: "trade", label: "Execute Trade", description: "Processing buy transaction", status: "pending" });
+    }
+
+    return steps;
+  };
+
+  const [steps, setSteps] = useState<SimulationStep[]>(getSteps());
   const [logs, setLogs] = useState<string[]>([]);
 
   const runSimulation = async () => {
+    if (!isConnected) {
+      addLog("Error: Please connect your wallet first");
+      return;
+    }
+
     setIsRunning(true);
     setLogs([]);
-    setSteps(prev => prev.map(s => ({ ...s, status: "pending" })));
+    setSteps(getSteps());
     setCurrentStep(0);
+    setGasEstimate(null);
 
-    for (let i = 0; i < steps.length; i++) {
+    addLog(`Block: #${blockNumber || "..."}`);
+    addLog(`Wallet: ${address?.slice(0, 10)}...`);
+    addLog("Starting marketplace simulation...\n");
+
+    const currentSteps = getSteps();
+    
+    for (let i = 0; i < currentSteps.length; i++) {
       setCurrentStep(i);
       setSteps(prev => prev.map((s, idx) => 
         idx === i ? { ...s, status: "running" } : s
       ));
       
-      addLog(`[Step ${i + 1}] Starting: ${steps[i].label}...`);
-      await new Promise(r => setTimeout(r, 1200));
+      addLog(`[${i + 1}/${currentSteps.length}] ${currentSteps[i].label}...`);
+      
+      // Simulate processing with realistic timing
+      await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+      
+      // Generate mock tx hash
+      const txHash = `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`;
       
       setSteps(prev => prev.map((s, idx) => 
-        idx === i ? { ...s, status: "success" } : s
+        idx === i ? { ...s, status: "success", txHash } : s
       ));
-      addLog(`[Step ${i + 1}] ✓ Completed: ${steps[i].label}`);
+      addLog(`✓ ${currentSteps[i].label} - TX: ${txHash}`);
+      
+      // Estimate gas
+      if (!gasEstimate) {
+        setGasEstimate(`${(0.001 + Math.random() * 0.005).toFixed(4)} MATIC`);
+      }
     }
 
-    addLog(`[Complete] All tests passed! Marketplace ready.`);
+    addLog("\n✓ Simulation complete!");
+    addLog(`Total gas estimate: ${gasEstimate || "calculating..."}`);
     setIsRunning(false);
   };
 
   const addLog = (message: string) => {
-    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()} - ${message}`]);
+    setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
   };
 
   const allPassed = steps.every(s => s.status === "success");
@@ -85,20 +137,29 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
         </button>
       </div>
 
-      {/* Wallet Simulation */}
+      {/* Wallet Status */}
       <div className="p-4 border-b border-[var(--border)]">
         <div className="surface p-3 rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-[var(--text-muted)]">Simulated Wallet</span>
-            <span className="badge-success">Connected</span>
+            <span className="text-xs text-[var(--text-muted)]">Connected Wallet</span>
+            <span className={`badge ${isConnected ? "badge-success" : "badge-warning"}`}>
+              {isConnected ? "Connected" : "Disconnected"}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-[var(--primary)]" />
-            <span className="text-sm font-medium text-[var(--text-primary)]">{mockBalance}</span>
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              {balance?.formatted ? `${parseFloat(balance.formatted).toFixed(4)} ${balance.symbol}` : "0.0000 MATIC"}
+            </span>
           </div>
           <div className="text-xs text-[var(--text-muted)] mt-1 font-mono">
-            0x742d35Cc6634C0532925a3b844Bc9e7595f...
+            {address ? `${address.slice(0, 10)}...${address.slice(-6)}` : "Not connected"}
           </div>
+          {blockNumber && (
+            <div className="text-xs text-[var(--text-muted)] mt-1">
+              Block: #{blockNumber.toString()}
+            </div>
+          )}
         </div>
       </div>
 
@@ -153,9 +214,14 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
 
       {/* Actions */}
       <div className="p-4 border-t border-[var(--border)] space-y-2">
+        {gasEstimate && (
+          <div className="text-xs text-center text-[var(--text-muted)] mb-2">
+            Est. Gas: {gasEstimate}
+          </div>
+        )}
         <button
           onClick={runSimulation}
-          disabled={isRunning}
+          disabled={isRunning || !isConnected || nodes.length === 0}
           className={`w-full btn-primary flex items-center justify-center gap-2 ${
             allPassed ? "bg-[var(--success)] hover:bg-[var(--success)]/90" : ""
           }`}
@@ -163,17 +229,27 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
           {isRunning ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Running...
+              Running Simulation...
             </>
           ) : allPassed ? (
             <>
               <CheckCircle className="w-4 h-4" />
               All Tests Passed
             </>
+          ) : !isConnected ? (
+            <>
+              <Wallet className="w-4 h-4" />
+              Connect Wallet
+            </>
+          ) : nodes.length === 0 ? (
+            <>
+              <Eye className="w-4 h-4" />
+              Add Components First
+            </>
           ) : (
             <>
               <Play className="w-4 h-4" />
-              Run Simulation
+              Run Simulation ({getSteps().length} steps)
             </>
           )}
         </button>

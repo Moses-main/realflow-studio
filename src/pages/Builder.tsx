@@ -43,6 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import ComponentPalette, { type PaletteItem } from "@/components/builder/ComponentPalette";
 import AISidebar from "@/components/builder/AISidebar";
 import CustomNode from "@/components/builder/CustomNode";
+import { TestPanel } from "@/components/builder/TestPanel";
 import { BezierEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -661,9 +662,10 @@ function BuilderCanvas() {
         </div>
         <div className="flex-1 overflow-y-auto">
           {isTestModeEnabled ? (
-            <div className="p-4">
-              <p className="text-sm text-gray-500">Test mode coming soon...</p>
-            </div>
+            <TestPanel 
+              nodes={nodes} 
+              onClose={() => setIsTestModeEnabled(false)} 
+            />
           ) : (
             <AISidebar />
           )}
