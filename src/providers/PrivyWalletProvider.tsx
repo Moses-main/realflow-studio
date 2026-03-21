@@ -47,7 +47,7 @@ interface PrivyConfigProps {
 }
 
 export function PrivyWalletProvider({ children }: PrivyConfigProps) {
-  const appId = import.meta.env.VITE_PRIVY_APP_ID || "cmdemo1234567890";
+  const appId = import.meta.env.VITE_PRIVY_APP_ID || "cmmyr423a005a0bkvwyvx2750";
 
   return (
     <WagmiConfig config={wagmiConfig}>
@@ -57,22 +57,15 @@ export function PrivyWalletProvider({ children }: PrivyConfigProps) {
           appearance: {
             theme: "dark",
             accentColor: "#5e6ad2",
-            logo: "https://www.realflow.studio/logo.svg",
           },
-          loginMethods: [
-            "email",
-            "google",
-            "discord",
-            "twitter",
-            "wallet",
-          ],
+          // Email and wallet only - no social logins
+          loginMethods: ["email", "wallet"],
           embeddedWallets: {
             createOnLogin: "all-users",
             requireUserPasswordOnCreate: false,
           },
           defaultChain: polygonAmoy,
           supportedChains: [polygonAmoy, polygon, mainnet],
-          captchaEnabled: false,
         }}
       >
         {children}
