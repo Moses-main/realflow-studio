@@ -9,6 +9,13 @@ vi.mock("@privy-io/react-auth", () => ({
     authenticated: false,
     user: null,
     ready: true,
+    connectWallet: vi.fn(),
+  }),
+  useWallets: () => ({
+    wallets: [],
+  }),
+  useLogin: () => ({
+    login: vi.fn(),
   }),
 }));
 
