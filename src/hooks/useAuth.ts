@@ -1,6 +1,12 @@
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useCallback, useEffect, useState } from "react";
 
+export interface WalletAccount {
+  address: string;
+  walletClientType: string;
+  chainId?: number;
+}
+
 export interface User {
   id: string;
   address: string | null;
@@ -21,12 +27,24 @@ export function useAuth() {
   
   const { wallets } = useWallets();
   const [embeddedWallet, setEmbeddedWallet] = useState<any>(null);
+  const [allAccounts, setAllAccounts] = useState<WalletAccount[]>([]);
 
-  // Find the embedded wallet (created by Privy)
+  // Get all wallet accounts
   useEffect(() => {
     if (wallets && wallets.length > 0) {
-      const embedded = wallets.find(w => w.walletClientType === "privy");
+      const accounts: WalletAccount[] = wallets.map((w: any) => ({
+        address: w.address,
+        walletClientType: w.walletClientType || 'unknown',
+        chainId: w.chainId,
+      }));
+      setAllAccounts(accounts);
+      
+      // Find the best wallet to use (prefer embedded, fallback to first)
+      const embedded = wallets.find((w: any) => w.walletClientType === "privy");
       setEmbeddedWallet(embedded || wallets[0]);
+    } else {
+      setAllAccounts([]);
+      setEmbeddedWallet(null);
     }
   }, [wallets]);
 
@@ -118,6 +136,45 @@ export function useAuth() {
     return txHash;
   }, [address, getWalletProvider]);
 
+  // Get balance for an address on Polygon Amoy
+  const getBalance = useCallback(async (addr: string): Promise<string> => {
+    try {
+      const provider = await embeddedWallet?.getEthereumProvider();
+      if (!provider) return "0.0000";
+      
+      const balance = await provider.request({
+        method: "eth_getBalance",
+        params: [addr, "latest"],
+      });
+      
+      // Convert hex to MATIC
+      const balanceInWei = parseInt(balance as string, 16);
+      const balanceInMatic = balanceInWei / 1e18;
+      return balanceInMatic.toFixed(4);
+    } catch (error) {
+      console.error("Failed to get balance:", error);
+      return "0.0000";
+    }
+  }, [embeddedWallet]);
+
+  // Switch active account (for external wallets with multiple accounts)
+  const switchAccount = useCallback(async (newAddress: string) => {
+    // For embedded wallets, we can't switch accounts
+    // For external wallets, the user switches in their wallet app
+    console.log("Switch to account:", newAddress);
+  }, []);
+
+  // Copy address to clipboard
+  const copyAddress = useCallback(async (addr: string) => {
+    try {
+      await navigator.clipboard.writeText(addr);
+      return true;
+    } catch (error) {
+      console.error("Failed to copy:", error);
+      return false;
+    }
+  }, []);
+
   return {
     user,
     authenticated,
@@ -130,9 +187,14 @@ export function useAuth() {
     connectWallet,
     getWalletProvider,
     sendTransaction,
+    getBalance,
+    switchAccount,
+    copyAddress,
     address,
     email,
     hasWallet: !!embeddedWallet,
+    allAccounts,
+    wallets: wallets || [],
   };
 }
 
