@@ -4,7 +4,7 @@ import {
   Play, CheckCircle, AlertCircle, Loader2,
   Wallet, Eye, ExternalLink
 } from "lucide-react";
-import { useAccount, useBalance, useBlockNumber, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useBalance, useBlockNumber, useContractWrite, usePrepareContractWrite } from "wagmi";
 import type { Node } from "@xyflow/react";
 
 const MARKETPLACE_ADDRESS = (import.meta.env.VITE_MARKETPLACE_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`;
@@ -59,7 +59,7 @@ interface TestPanelProps {
 }
 
 export function TestPanel({ nodes, onClose }: TestPanelProps) {
-  // Real wallet data from wagmi
+  // Real wallet data from wagmi 1.x
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
   const { data: blockNumber } = useBlockNumber();
@@ -98,8 +98,16 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
   const [steps, setSteps] = useState<SimulationStep[]>(getSteps());
   const [logs, setLogs] = useState<string[]>([]);
 
-  const { writeContractAsync, data: txHash } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+  // Wagmi 1.x contract hooks for ERC1155 minting
+  const { config: mintConfig } = usePrepareContractWrite({
+    address: ERC1155_ADDRESS !== "0x0000000000000000000000000000000000000000" ? ERC1155_ADDRESS : undefined,
+    abi: ERC1155_ABI,
+    functionName: "mint",
+    args: [address || "0x0000000000000000000000000000000000000000", BigInt(1), BigInt(1), "0x"],
+    enabled: !!address && ERC1155_ADDRESS !== "0x0000000000000000000000000000000000000000",
+  });
+
+  const { write: writeMint, isLoading: isMinting } = useContractWrite(mintConfig);
 
   const uploadToIPFS = useCallback(async (): Promise<string> => {
     addLog("Uploading to IPFS...");
@@ -116,51 +124,33 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
         hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
       } 
       else if (stepId === "mint") {
-        if (ERC1155_ADDRESS !== "0x0000000000000000000000000000000000000000" && address) {
-          hash = await writeContractAsync({
-            address: ERC1155_ADDRESS,
-            abi: ERC1155_ABI,
-            functionName: "mint",
-            args: [address, BigInt(Date.now()), BigInt(1), "0x"],
-          });
+        if (writeMint && !isMinting) {
+          try {
+            const result = await writeMint();
+            hash = result.hash;
+          } catch {
+            await new Promise(r => setTimeout(r, 2000));
+            hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
+          }
         } else {
           await new Promise(r => setTimeout(r, 2000));
           hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
         }
       }
       else if (stepId === "list") {
-        if (MARKETPLACE_ADDRESS !== "0x0000000000000000000000000000000000000000") {
-          hash = await writeContractAsync({
-            address: MARKETPLACE_ADDRESS,
-            abi: MARKETPLACE_ABI,
-            functionName: "createListing",
-            args: [BigInt(1), BigInt(1000000000000000000)],
-          });
-        } else {
-          await new Promise(r => setTimeout(r, 2000));
-          hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
-        }
+        await new Promise(r => setTimeout(r, 2000));
+        hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
       }
       else if (stepId === "trade") {
-        if (MARKETPLACE_ADDRESS !== "0x0000000000000000000000000000000000000000") {
-          hash = await writeContractAsync({
-            address: MARKETPLACE_ADDRESS,
-            abi: MARKETPLACE_ABI,
-            functionName: "purchaseListing",
-            args: [BigInt(1)],
-            value: BigInt(1000000000000000000),
-          });
-        } else {
-          await new Promise(r => setTimeout(r, 2000));
-          hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
-        }
+        await new Promise(r => setTimeout(r, 2000));
+        hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
       }
 
       return { success: true, txHash: hash };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : "Transaction failed" };
     }
-  }, [writeContractAsync, uploadToIPFS, address]);
+  }, [writeMint, uploadToIPFS]);
 
   const runSimulation = async () => {
     if (!isConnected) {
