@@ -18,7 +18,14 @@ export function useAuth() {
   const { disconnect } = useDisconnect();
   const { address, isConnected, connector } = useAccount();
   const { data: ensName } = useEnsName({ address: address });
-  const { data: ensAvatar } = useEnsAvatar({ address: address });
+  
+  // useEnsAvatar requires name parameter, not address directly
+  const { data: ensAvatar } = useEnsAvatar({ 
+    name: ensName || undefined,
+    query: {
+      enabled: !!ensName,
+    }
+  });
 
   const [isInitialized, setIsInitialized] = useState(false);
 
