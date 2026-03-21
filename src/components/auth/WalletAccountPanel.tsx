@@ -22,7 +22,8 @@ export function WalletAccountPanel() {
     allAccounts, 
     getBalance, 
     copyAddress,
-    connectWallet 
+    connectWallet,
+    switchAccount
   } = useAuth();
   const { openLoginModal } = useLoginModal();
   const { login } = usePrivy();
@@ -186,11 +187,12 @@ export function WalletAccountPanel() {
                   allAccounts.map((account, index) => (
                     <div
                       key={account.address}
-                      className={`p-4 border-b border-[var(--border)] last:border-0 ${
+                      onClick={() => account.address !== user.address && switchAccount(account.address)}
+                      className={`p-4 border-b border-[var(--border)] last:border-0 cursor-pointer ${
                         account.address === user.address 
                           ? "bg-[var(--primary-muted)]" 
-                          : "hover:bg-[var(--surface-hover)]"
-                      } transition-colors`}
+                          : "hover:bg-[var(--surface-hover)] hover:border-[var(--primary)]/30"
+                      } transition-all`}
                     >
                       <div className="flex items-start gap-3">
                         {/* Account Icon */}
@@ -250,6 +252,17 @@ export function WalletAccountPanel() {
 
                           {/* Actions */}
                           <div className="flex gap-2 mt-2">
+                            {account.address !== user.address && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  switchAccount(account.address);
+                                }}
+                                className="flex items-center gap-1 text-xs text-[var(--primary)] hover:underline"
+                              >
+                                Switch to this account
+                              </button>
+                            )}
                             <a
                               href={`https://www.oklink.com/amoy/address/${account.address}`}
                               target="_blank"

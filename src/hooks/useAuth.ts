@@ -157,12 +157,45 @@ export function useAuth() {
     }
   }, [embeddedWallet]);
 
-  // Switch active account (for external wallets with multiple accounts)
+  // Switch active account - activates the wallet with the given address
   const switchAccount = useCallback(async (newAddress: string) => {
-    // For embedded wallets, we can't switch accounts
-    // For external wallets, the user switches in their wallet app
-    console.log("Switch to account:", newAddress);
-  }, []);
+    if (!wallets || wallets.length === 0) return;
+    
+    // Find the wallet with the target address
+    const targetWallet = wallets.find((w: any) => w.address.toLowerCase() === newAddress.toLowerCase());
+    
+    if (targetWallet) {
+      try {
+        // For Privy wallets, we need to call connectWallet which will prompt to add/switch
+        // For embedded wallets, we switch by updating embeddedWallet state
+        const isEmbedded = targetWallet.walletClientType === "privy";
+        
+        if (isEmbedded) {
+          // Update the active embedded wallet
+          setEmbeddedWallet(targetWallet);
+          console.log("Switched to embedded wallet:", newAddress);
+        } else {
+          // For external wallets, we need to prompt for connection
+          // This will open the wallet's account selector
+          await connectWallet();
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("Failed to switch account:", error);
+        return false;
+      }
+    } else {
+      // Wallet not connected yet, try to connect
+      try {
+        await connectWallet();
+        return true;
+      } catch (error) {
+        console.error("Failed to connect wallet:", error);
+        return false;
+      }
+    }
+  }, [wallets, connectWallet]);
 
   // Copy address to clipboard
   const copyAddress = useCallback(async (addr: string) => {
