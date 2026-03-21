@@ -9,6 +9,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useViewport,
   Background,
   MiniMap,
   applyNodeChanges,
@@ -48,6 +49,7 @@ import { TestPanel } from "@/components/builder/TestPanel";
 import { BezierEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
 
 // Node types - maps component types to React Flow node components
 const nodeTypes = { custom: CustomNode };
@@ -104,6 +106,31 @@ function BuilderCanvas() {
       pushToHistory();
     }
   }, [nodes, edges]);
+
+  // =====================
+  // MOBILE OPTIMIZATION
+  // =====================
+  
+  const {
+    isMobile,
+    isTablet,
+    isTouchDevice,
+    enableMinimap,
+    panOnScroll,
+    zoomToFit,
+    setZoomLevel,
+    getZoomLevel,
+  } = useMobileOptimization();
+
+  const minimapConfig = useResponsiveMinimap();
+
+  // Auto-collapse panels on mobile
+  useEffect(() => {
+    if (isMobile && (isLeftToolbarOpen || isRightPanelOpen)) {
+      setIsLeftToolbarOpen(false);
+      setIsRightPanelOpen(false);
+    }
+  }, [isMobile]);
 
   // =====================
   // NODE HANDLERS
@@ -608,20 +635,20 @@ function BuilderCanvas() {
             connectionLineType="bezier"
             style={{ backgroundColor: "#0e1012" }}
             minZoom={0.1}
-            maxZoom={4}
-            defaultViewport={{ x: 50, y: 50, zoom: 1 }}
+            maxZoom={isMobile ? 2 : 4}
+            defaultViewport={{ x: 50, y: 50, zoom: isMobile ? 0.8 : 1 }}
             fitView={nodes.length === 0}
-            fitViewOptions={{ padding: 0.2 }}
-            zoomOnScroll
-            zoomOnPinch
-            panOnScroll={false}
-            panOnDrag={[1, 2]}
-            selectNodesOnDrag={false}
+            fitViewOptions={{ padding: isMobile ? 0.3 : 0.2 }}
+            zoomOnScroll={!isTouchDevice}
+            zoomOnPinch={isTouchDevice}
+            panOnScroll={panOnScroll}
+            panOnDrag={isMobile ? [2] : [1, 2]}
+            selectNodesOnDrag={!isMobile}
             nodesDraggable
-            nodesConnectable
+            nodesConnectable={!isMobile}
             elementsSelectable
-            multiSelectionKeyCode="Shift"
-            deleteKeyCode="Delete"
+            multiSelectionKeyCode={isMobile ? null : "Shift"}
+            deleteKeyCode={isMobile ? null : "Delete"}
             proOptions={{ hideAttribution: true }}
           >
             {/* Background Grid */}
@@ -633,23 +660,30 @@ function BuilderCanvas() {
             />
 
             {/* Mini Map */}
-            <MiniMap
-              className="!bg-[#141517] !border-gray-700/50 !rounded-lg !m-2"
-              nodeColor={(node) => {
-                const colors: Record<string, string> = {
-                  Core: "#3b82f6",
-                  Display: "#a855f7",
-                  Trading: "#f59e0b",
-                  Ownership: "#10b981",
-                  Web3: "#6366f1",
-                  UI: "#f43f5e",
-                };
-                return colors[(node.data?.category as string) || "Core"] || "#6366f1";
-              }}
-              maskColor="rgba(0,0,0,0.6)"
-              pannable
-              zoomable
-            />
+            {enableMinimap && (
+              <MiniMap
+                className="!bg-[#141517] !border-gray-700/50 !rounded-lg"
+                style={{
+                  left: minimapConfig.position === "bottom-left" ? 10 : undefined,
+                  right: minimapConfig.position === "bottom-right" ? 10 : undefined,
+                  bottom: 10,
+                }}
+                nodeColor={(node) => {
+                  const colors: Record<string, string> = {
+                    Core: "#3b82f6",
+                    Display: "#a855f7",
+                    Trading: "#f59e0b",
+                    Ownership: "#10b981",
+                    Web3: "#6366f1",
+                    UI: "#f43f5e",
+                  };
+                  return colors[(node.data?.category as string) || "Core"] || "#6366f1";
+                }}
+                maskColor="rgba(0,0,0,0.6)"
+                pannable
+                zoomable={!isMobile}
+              />
+            )}
           </ReactFlow>
 
           {/* Empty State */}
