@@ -1,363 +1,855 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ReactFlow,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  Background,
-  Controls,
-  MiniMap,
+  ReactFlowProvider,
   type Connection,
   type Edge,
   type Node,
-  ReactFlowProvider,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+  useViewport,
+  Background,
+  MiniMap,
+  applyNodeChanges,
+  applyEdgeChanges,
+  type NodeChange,
+  type EdgeChange,
+  type OnConnect,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet
+  Blocks, 
+  ArrowLeft, 
+  Sparkles, 
+  Save, 
+  Trash2, 
+  Wallet, 
+  Menu, 
+  X, 
+  Undo2, 
+  Redo2, 
+  ZoomIn, 
+  ZoomOut, 
+  Maximize2,
+  FlaskConical, 
+  Copy, 
+  Clipboard, 
+  ChevronDown,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import ComponentPalette, { type PaletteItem } from "@/components/builder/ComponentPalette";
 import AISidebar from "@/components/builder/AISidebar";
 import CustomNode from "@/components/builder/CustomNode";
-import { CreativeMode } from "@/components/ai/CreativeMode";
-import { useAuth } from "@/hooks/useAuth";
+import { TestPanel } from "@/components/builder/TestPanel";
+import { AnimatedDottedEdge } from "@/components/builder/BezierEdge";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
+import { ConnectButton } from "@/components/auth/ConnectButton";
 
+// Node types - maps component types to React Flow node components
 const nodeTypes = { custom: CustomNode };
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// Edge types - uses AnimatedDottedEdge for animated flow visualization
+const edgeTypes = {
+  animatedDotted: AnimatedDottedEdge,
+  default: AnimatedDottedEdge,
+};
 
-const initialNodes: Node[] = [
-  {
-    id: "1",
-    type: "custom",
-    position: { x: 250, y: 50 },
-    data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" },
-  },
-  {
-    id: "2",
-    type: "custom",
-    position: { x: 100, y: 200 },
-    data: { label: "Token Mint", componentType: "mintButton", category: "Core" },
-  },
-  {
-    id: "3",
-    type: "custom",
-    position: { x: 400, y: 200 },
-    data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" },
-  },
-];
-
-const initialEdges: Edge[] = [
-  { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-  { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-];
-
-const Builder = () => {
+/**
+ * Inner Builder component - uses React Flow hooks
+ * Must be wrapped with ReactFlowProvider
+ */
+function BuilderCanvas() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, connectWallet } = useAuth();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [aiOpen, setAiOpen] = useState(true);
-  const [creativeMode, setCreativeMode] = useState(false);
-  const [deploying, setDeploying] = useState(false);
-  const [deployed, setDeployed] = useState(false);
-  const [deployAddress, setDeployAddress] = useState("");
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const idCounter = useRef(4);
-  const draggedItem = useRef<PaletteItem | null>(null);
+  const reactFlow = useReactFlow();
+  
+  // =====================
+  // STATE MANAGEMENT
+  // =====================
+  
+  // Canvas state - nodes and edges
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  // UI state
+  const [isTestModeEnabled, setIsTestModeEnabled] = useState(false);
+  const [isLeftToolbarOpen, setIsLeftToolbarOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  
+  // Clipboard for copy/paste
+  const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
 
-  const onConnect = useCallback(
-    (params: Connection) =>
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(175, 80%, 50%)" } }, eds)),
-    [setEdges]
-  );
+  // =====================
+  // UNDO/REDO SYSTEM
+  // =====================
+  
+  const { 
+    pushToHistory, 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo, 
+    clear: clearHistory 
+  } = useUndoRedo(nodes, edges, setNodes, setEdges);
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
+  // Push to history when nodes or edges change (debounced via hook)
+  const prevNodesRef = useRef<Node[]>([]);
+  const prevEdgesRef = useRef<Edge[]>([]);
+  
+  useEffect(() => {
+    const nodesChanged = JSON.stringify(nodes) !== JSON.stringify(prevNodesRef.current);
+    const edgesChanged = JSON.stringify(edges) !== JSON.stringify(prevEdgesRef.current);
+    
+    if (nodesChanged || edgesChanged) {
+      if (nodes.length > 0 || edges.length > 0) {
+        pushToHistory();
+      }
+      prevNodesRef.current = nodes;
+      prevEdgesRef.current = edges;
+    }
+  }, [nodes, edges, pushToHistory]);
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (!draggedItem.current || !reactFlowWrapper.current) return;
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = { x: e.clientX - bounds.left - 90, y: e.clientY - bounds.top - 25 };
-      const newNode: Node = {
-        id: String(idCounter.current++),
-        type: "custom",
-        position,
-        data: { 
-          label: draggedItem.current.label, 
-          componentType: draggedItem.current.type,
-          category: draggedItem.current.category 
-        },
-      };
-      setNodes((nds) => [...nds, newNode]);
-      draggedItem.current = null;
+  // =====================
+  // MOBILE OPTIMIZATION
+  // =====================
+  
+  const {
+    isMobile,
+    isTablet,
+    isTouchDevice,
+    enableMinimap,
+    panOnScroll,
+    zoomToFit,
+    setZoomLevel,
+    getZoomLevel,
+  } = useMobileOptimization();
+
+  const minimapConfig = useResponsiveMinimap();
+
+  // Auto-collapse panels on mobile
+  useEffect(() => {
+    if (isMobile && (isLeftToolbarOpen || isRightPanelOpen)) {
+      setIsLeftToolbarOpen(false);
+      setIsRightPanelOpen(false);
+    }
+  }, [isMobile]);
+
+  // =====================
+  // NODE HANDLERS
+  // =====================
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      
+      // Track selection changes
+      changes.forEach((change) => {
+        if (change.type === "select") {
+          setSelectedNodeIds((prev) => {
+            if (change.selected) {
+              return [...prev, change.id];
+            }
+            return prev.filter((id) => id !== change.id);
+          });
+        }
+      });
     },
     [setNodes]
   );
 
-  const handleDeploy = async () => {
-    if (!user.isWalletConnected) {
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    },
+    [setEdges]
+  );
+
+  // =====================
+  // CONNECTION HANDLER
+  // =====================
+
+  const handleConnect: OnConnect = useCallback(
+    (connection: Connection) => {
+      // Validate connection
+      if (!connection.source || !connection.target) return;
+      
+      const newEdge: Edge = {
+        ...connection,
+        id: `e-${connection.source}-${connection.target}-${Date.now()}`,
+        type: "animatedDotted",
+        animated: false,
+        style: { stroke: "#6366f1", strokeWidth: 2 },
+      };
+      
+      setEdges((eds) => [...eds, newEdge]);
+      
       toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet to deploy.",
+        title: "Connected",
+        description: "Components connected successfully",
+      });
+    },
+    [setEdges, toast]
+  );
+
+  // =====================
+  // DRAG & DROP
+  // =====================
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  // Add component to canvas at center or given position
+  const addComponent = useCallback((item: PaletteItem, position?: { x: number; y: number }) => {
+    const viewport = reactFlow.getViewport();
+    const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+    
+    // Calculate center position or use provided position
+    let x = 200 + Math.random() * 100;
+    let y = 150 + Math.random() * 100;
+    
+    if (bounds && !position) {
+      x = (bounds.width / 2 - viewport.x) / viewport.zoom;
+      y = (bounds.height / 2 - viewport.y) / viewport.zoom;
+    } else if (position) {
+      x = position.x;
+      y = position.y;
+    }
+
+    const newNode: Node = {
+      id: `${item.type}-${Date.now()}`,
+      type: "custom",
+      position: { x, y },
+      data: {
+        label: item.label,
+        componentType: item.type,
+        category: item.category,
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+    
+    toast({
+      title: "Component added",
+      description: `${item.label} added to canvas`,
+    });
+  }, [reactFlow, setNodes, toast]);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      
+      const data = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text");
+      
+      if (data) {
+        try {
+          const paletteItem: PaletteItem = JSON.parse(data);
+          const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+          
+          if (!bounds) return;
+          
+          // Calculate position relative to viewport
+          const viewport = reactFlow.getViewport();
+          
+          const newNode: Node = {
+            id: `${paletteItem.type}-${Date.now()}`,
+            type: "custom",
+            position: {
+              x: (e.clientX - bounds.left - viewport.x) / viewport.zoom,
+              y: (e.clientY - bounds.top - viewport.y) / viewport.zoom,
+            },
+            data: {
+              label: paletteItem.label,
+              componentType: paletteItem.type,
+              category: paletteItem.category,
+            },
+          };
+          
+          setNodes((nds) => [...nds, newNode]);
+          
+          toast({
+            title: "Component added",
+            description: `${paletteItem.label} added to canvas`,
+          });
+        } catch (err) {
+          console.error("Failed to parse drop data:", err);
+        }
+      }
+    },
+    [reactFlow, setNodes, toast]
+  );
+
+  // =====================
+  // ACTIONS
+  // =====================
+
+  const handleSave = useCallback(() => {
+    const flowData = {
+      nodes,
+      edges,
+      viewport: reactFlow.getViewport(),
+    };
+    localStorage.setItem("realflow-canvas", JSON.stringify(flowData));
+    toast({
+      title: "Canvas saved",
+      description: `${nodes.length} components saved`,
+    });
+  }, [nodes, edges, reactFlow, toast]);
+
+  const handleClear = useCallback(() => {
+    if (nodes.length > 0) {
+      setNodes([]);
+      setEdges([]);
+      clearHistory();
+      toast({
+        title: "Canvas cleared",
+        description: "All components removed",
+      });
+    }
+  }, [nodes.length, setNodes, setEdges, clearHistory, toast]);
+
+  const handleUndo = useCallback(() => {
+    const state = undo();
+    if (state) {
+      toast({ title: "Undo", description: "Previous state restored" });
+    }
+  }, [undo, toast]);
+
+  const handleRedo = useCallback(() => {
+    const state = redo();
+    if (state) {
+      toast({ title: "Redo", description: "Next state restored" });
+    }
+  }, [redo, toast]);
+
+  const handleDelete = useCallback(() => {
+    if (selectedNodeIds.length > 0) {
+      // Delete selected nodes
+      setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
+      // Delete edges connected to selected nodes
+      setEdges((eds) => eds.filter(
+        (e) => !selectedNodeIds.includes(e.source) && !selectedNodeIds.includes(e.target)
+      ));
+      toast({
+        title: "Deleted",
+        description: `${selectedNodeIds.length} component(s) removed`,
+      });
+      setSelectedNodeIds([]);
+    }
+  }, [selectedNodeIds, setNodes, setEdges, toast]);
+
+  const handleCopy = useCallback(() => {
+    const selectedNodes = nodes.filter((n) => selectedNodeIds.includes(n.id));
+    const selectedEdges = edges.filter(
+      (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
+    );
+    clipboardRef.current = { nodes: selectedNodes, edges: selectedEdges };
+    toast({
+      title: "Copied",
+      description: `${selectedNodes.length} component(s) copied`,
+    });
+  }, [nodes, edges, selectedNodeIds, toast]);
+
+  const handlePaste = useCallback(() => {
+    if (!clipboardRef.current || clipboardRef.current.nodes.length === 0) return;
+    
+    const viewport = reactFlow.getViewport();
+    const offset = 50;
+    
+    const newNodes = clipboardRef.current.nodes.map((node) => ({
+      ...node,
+      id: `${node.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      position: {
+        x: node.position.x + offset,
+        y: node.position.y + offset,
+      },
+      selected: false,
+    }));
+    
+    setNodes((nds) => [...nds, ...newNodes]);
+    toast({
+      title: "Pasted",
+      description: `${newNodes.length} component(s) pasted`,
+    });
+  }, [reactFlow, setNodes, toast]);
+
+  const handleSelectAll = useCallback(() => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+    setSelectedNodeIds(nodes.map((n) => n.id));
+  }, [nodes, setNodes]);
+
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploymentStatus, setDeploymentStatus] = useState<string | null>(null);
+
+  const handleDeploy = useCallback(async () => {
+    if (nodes.length === 0) {
+      toast({
+        title: "Cannot deploy",
+        description: "Add components to the canvas first",
         variant: "destructive",
       });
-      await connectWallet();
       return;
     }
 
-    setDeploying(true);
+    const nodeTypes = [...new Set(nodes.map((n) => n.data?.componentType))];
+    const hasRequiredComponents = nodeTypes.some(
+      (type) => ["mintButton", "listingGrid", "buyButton"].includes(type)
+    );
+
+    if (!hasRequiredComponents) {
+      toast({
+        title: "Missing components",
+        description: "Add mint, listing, or buy components to deploy",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeploying(true);
+    setDeploymentStatus("Generating contract code...");
 
     try {
-      const response = await fetch(`${API_URL}/api/web3/estimate-deployment`, {
+      const flowData = {
+        nodes,
+        edges,
+        components: nodeTypes,
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          contractType: "marketplace",
-          nodes: nodes.map(n => n.data.componentType),
-          deployer: user.address
-        }),
+        body: JSON.stringify(flowData),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
-        setDeployed(true);
-        toast({
-          title: "Marketplace Deployed!",
-          description: `Deployed at ${deployAddress} on Polygon Amoy`,
-        });
-      } else {
+      if (!response.ok) {
         throw new Error("Deployment failed");
       }
-    } catch (error) {
-      setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
-      setDeployed(true);
+
+      const result = await response.json();
+
+      setDeploymentStatus("Deploying to blockchain...");
+
       toast({
-        title: "Marketplace Deployed!",
-        description: "Deployed to Polygon Amoy testnet",
+        title: "Deployment successful!",
+        description: `Contract deployed at ${result.address?.slice(0, 10)}...`,
+      });
+
+      localStorage.setItem("deployed-contract", JSON.stringify(result));
+    } catch (error) {
+      console.error("Deployment error:", error);
+      toast({
+        title: "Deployment failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
       });
     } finally {
-      setDeploying(false);
+      setIsDeploying(false);
+      setDeploymentStatus(null);
     }
-  };
+  }, [nodes, edges, toast]);
 
-  const handleSave = () => {
-    const config = { nodes, edges };
-    localStorage.setItem("marketplace-config", JSON.stringify(config));
-    toast({
-      title: "Saved!",
-      description: "Your marketplace design has been saved.",
-    });
-  };
+  // =====================
+  // ZOOM CONTROLS
+  // =====================
 
-  const handleExport = () => {
-    const config = { nodes, edges };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "marketplace-config.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const handleZoomIn = useCallback(() => {
+    reactFlow.zoomIn({ duration: 200 });
+  }, [reactFlow]);
 
-  const handleClear = () => {
-    setNodes([]);
-    setEdges([]);
-    toast({
-      title: "Canvas cleared",
-      description: "Start fresh with a new design.",
-    });
-  };
+  const handleZoomOut = useCallback(() => {
+    reactFlow.zoomOut({ duration: 200 });
+  }, [reactFlow]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("marketplace-config");
-    if (saved) {
-      try {
-        const config = JSON.parse(saved);
-        if (config.nodes && config.nodes.length > 0) {
-          setNodes(config.nodes);
-          setEdges(config.edges || []);
-        }
-      } catch (e) {
-        console.error("Failed to load saved config", e);
-      }
-    }
-  }, []);
+  const handleFitView = useCallback(() => {
+    reactFlow.fitView({ padding: 0.2, duration: 500 });
+  }, [reactFlow]);
+
+  // =====================
+  // KEYBOARD SHORTCUTS
+  // =====================
+
+  useKeyboardShortcuts({
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onDelete: handleDelete,
+    onCopy: handleCopy,
+    onPaste: handlePaste,
+    onSelectAll: handleSelectAll,
+    onSave: handleSave,
+  });
+
+  // =====================
+  // RENDER
+  // =====================
 
   return (
-    <ReactFlowProvider>
-      <div className="h-screen flex bg-background">
-        <div className="w-60 border-r border-border flex flex-col glass-strong shrink-0">
-          <div className="flex items-center gap-2 p-4 border-b border-border">
-            <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-secondary transition-colors">
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* ===================== */}
+      {/* LEFT PANEL - Components */}
+      {/* ===================== */}
+      <div className={`
+        ${isLeftToolbarOpen ? "w-64" : "w-0"} 
+        ${isMobile ? "absolute left-0 z-50 h-full shadow-2xl" : "flex-shrink-0"}
+        flex flex-col border-r border-[var(--border)] 
+        bg-[var(--surface)] transition-all duration-200 overflow-hidden
+      `}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-indigo-500 flex items-center justify-center">
+              <Blocks className="w-3 h-3 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Components</span>
+          </div>
+          <button
+            onClick={() => setIsLeftToolbarOpen(!isLeftToolbarOpen)}
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="text-xs text-gray-500 mb-3 px-2">
+            Drag components to canvas
+          </div>
+          <ComponentPalette onDragStart={() => {}} onAdd={addComponent} />
+        </div>
+      </div>
+
+      {/* ===================== */}
+      {/* MAIN CANVAS AREA */}
+      {/* ===================== */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Top Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
+          {/* Left Section */}
+          <div className="flex items-center gap-3">
+            {/* Toggle Left Panel */}
+            {!isLeftToolbarOpen && (
+              <button
+                onClick={() => setIsLeftToolbarOpen(true)}
+                className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+            )}
+            
+            {/* Back */}
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
               <ArrowLeft className="w-4 h-4" />
             </button>
+            
+            {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <Blocks className="w-3 h-3 text-primary-foreground" />
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-[var(--primary)] to-indigo-500 flex items-center justify-center">
+                <Blocks className="w-3 h-3 text-white" />
               </div>
               <span className="font-semibold text-sm">Builder</span>
             </div>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Components</span>
-              <span className="text-xs text-primary">{nodes.length} added</span>
-            </div>
-            <ComponentPalette onDragStart={(item) => { draggedItem.current = item; }} />
-          </div>
-          
-          <div className="p-4 border-t border-border space-y-2">
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleSave}>
-                <Save className="w-3 h-3" /> Save
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleExport}>
-                <Download className="w-3 h-3" /> Export
-              </Button>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full gap-1 text-destructive hover:text-destructive"
-              onClick={handleClear}
+
+            <div className="h-5 w-px bg-[var(--border)]" />
+
+            {/* Undo/Redo */}
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Undo (Ctrl+Z)"
             >
-              <Trash2 className="w-3 h-3" /> Clear Canvas
-            </Button>
-            <Button
-              className="w-full gap-2"
-              onClick={handleDeploy}
-              disabled={deploying || deployed}
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Redo (Ctrl+Shift+Z)"
             >
-              {deploying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Deploying...
-                </>
-              ) : deployed ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Deployed!
-                </>
-              ) : (
-                <>
-                  <Rocket className="w-4 h-4" />
-                  Deploy Marketplace
-                </>
-              )}
-            </Button>
+              <Redo2 className="w-4 h-4" />
+            </button>
+
+            <div className="h-5 w-px bg-[var(--border)]" />
+
+            {/* Zoom */}
+            <button
+              onClick={handleZoomOut}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleFitView}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Fit View"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+
+            <div className="h-5 w-px bg-[var(--border)]" />
+
+            {/* Copy/Paste */}
+            <button
+              onClick={handleCopy}
+              disabled={selectedNodeIds.length === 0}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] disabled:opacity-30"
+              title="Copy (Ctrl+C)"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handlePaste}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Paste (Ctrl+V)"
+            >
+              <Clipboard className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Right Section */}
+          <div className="flex items-center gap-3">
+            {/* Test Mode */}
+            <button
+              onClick={() => {
+                setIsTestModeEnabled(!isTestModeEnabled);
+                if (!isTestModeEnabled) setIsRightPanelOpen(true);
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
+                isTestModeEnabled 
+                  ? "bg-[var(--primary)]/20 text-[var(--primary)]" 
+                  : "bg-[var(--surface-hover)] text-gray-400"
+              }`}
+            >
+              <FlaskConical className="w-4 h-4" />
+              <span className="text-xs font-medium">Test</span>
+            </button>
+
+            {/* Wallet */}
+            <ConnectButton variant="outline" size="sm" />
+
+            {/* Toggle Right Panel */}
+            <button
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+              className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 relative" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
+        {/* ===================== */}
+        {/* REACT FLOW CANVAS */}
+        {/* ===================== */}
+        <div
+          ref={reactFlowWrapper}
+          className="flex-1 relative"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onConnect={handleConnect}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            snapToGrid
+            snapGrid={[16, 16]}
+            defaultEdgeOptions={{
+              type: "animatedDotted",
+              style: { stroke: "#6366f1", strokeWidth: 2, strokeDasharray: "8 4" },
+            }}
+            connectionLineStyle={{ stroke: "#6366f1", strokeWidth: 2 }}
+            connectionLineType="bezier"
+            style={{ backgroundColor: "#0e1012" }}
+            minZoom={0.1}
+            maxZoom={2}
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
             fitView
-            className="bg-background"
+            fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+            zoomOnScroll
+            zoomOnPinch
+            panOnScroll
+            panOnDrag
+            selectNodesOnDrag={false}
+            nodesDraggable
+            nodesConnectable
+            elementsSelectable
+            multiSelectionKeyCode="Shift"
+            deleteKeyCode="Delete"
+            proOptions={{ hideAttribution: true }}
           >
-            <Background color="hsl(220, 15%, 12%)" gap={20} size={1} />
-            <Controls />
-            <MiniMap />
+            {/* Background Grid */}
+            <Background
+              color="#2a2c2e"
+              gap={20}
+              size={1}
+              style={{ backgroundColor: "#0e1012" }}
+            />
+
+            {/* Mini Map */}
+            {enableMinimap && (
+              <MiniMap
+                className="!bg-[#141517] !border-gray-700/50 !rounded-lg"
+                style={{
+                  left: minimapConfig.position === "bottom-left" ? 10 : undefined,
+                  right: minimapConfig.position === "bottom-right" ? 10 : undefined,
+                  bottom: 10,
+                }}
+                nodeColor={(node) => {
+                  const colors: Record<string, string> = {
+                    Core: "#3b82f6",
+                    Display: "#a855f7",
+                    Trading: "#f59e0b",
+                    Ownership: "#10b981",
+                    Web3: "#6366f1",
+                    UI: "#f43f5e",
+                  };
+                  return colors[(node.data?.category as string) || "Core"] || "#6366f1";
+                }}
+                maskColor="rgba(0,0,0,0.6)"
+                pannable
+                zoomable={!isMobile}
+              />
+            )}
           </ReactFlow>
 
-          <AnimatePresence>
-            {deployed && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-xl px-6 py-4 glow-primary flex items-center gap-4"
-              >
-                <Check className="w-5 h-5 text-primary" />
-                <div>
-                  <div className="font-semibold text-sm">Marketplace Deployed!</div>
-                  <div className="text-xs text-muted-foreground font-mono">
-                    {deployAddress.slice(0, 10)}... on Polygon Amoy
-                  </div>
+          {/* Empty State */}
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <div className="text-center p-10 border-2 border-dashed border-gray-700/50 rounded-2xl bg-gray-900/30">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-800 flex items-center justify-center">
+                  <Blocks className="w-8 h-8 text-gray-600" />
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => window.open(`https://amoy.polygonscan.com/address/${deployAddress}`, "_blank")}
-                >
-                  View on Amoy Explorer
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <button
-            onClick={() => setAiOpen(!aiOpen)}
-            className="absolute top-4 right-4 z-10 p-2 glass rounded-lg hover:border-primary/40 transition-colors"
-          >
-            {aiOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-          </button>
-
-          {!user.isWalletConnected && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="glass rounded-lg px-4 py-2 text-sm flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-amber-500" />
-                Connect wallet to deploy
-                <Button size="sm" variant="outline" className="h-7" onClick={() => connectWallet()}>
-                  Connect
-                </Button>
+                <h3 className="text-lg font-medium text-gray-400 mb-2">Start Building</h3>
+                <p className="text-sm text-gray-500">Drag components from the left panel</p>
               </div>
             </div>
           )}
+
+          {/* Status Bar */}
+          <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-xs text-gray-500 bg-[#0e1012]/90 px-3 py-1.5 rounded-lg border border-gray-800">
+            <span>{nodes.length} node{nodes.length !== 1 ? "s" : ""}</span>
+            <span className="text-gray-700">|</span>
+            <span>{edges.length} edge{edges.length !== 1 ? "s" : ""}</span>
+            <span className="text-gray-700">|</span>
+            <span>Scroll to zoom</span>
+            <span className="text-gray-700">|</span>
+            <span>Drag to pan</span>
+          </div>
+
+          {/* Zoom Level */}
+          <div className="absolute bottom-4 right-20 z-10 text-xs text-gray-500 bg-[#0e1012]/90 px-2 py-1 rounded border border-gray-800">
+            {Math.round((reactFlow.getViewport().zoom || 1) * 100)}%
+          </div>
         </div>
 
-        <AnimatePresence>
-          {aiOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 400, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="border-l border-border glass-strong overflow-hidden shrink-0"
-            >
-              <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
-                <button
-                  onClick={() => setCreativeMode(false)}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                    !creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  AI Chat
-                </button>
-                <button
-                  onClick={() => setCreativeMode(true)}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${
-                    creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3" /> Creative Mode
-                </button>
-              </div>
-              {creativeMode ? <CreativeMode /> : <AISidebar />}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Bottom Bar */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSave}>
+              <Save className="w-4 h-4 mr-1" /> Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClear}>
+              <Trash2 className="w-4 h-4 mr-1" /> Clear
+            </Button>
+            <ConnectButton variant="outline" size="sm" />
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            disabled={nodes.length === 0 || isDeploying}
+            onClick={handleDeploy}
+            className="bg-gradient-to-r from-[var(--primary)] to-indigo-500"
+          >
+            {isDeploying ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                {deploymentStatus || "Deploying..."}
+              </>
+            ) : (
+              "Deploy Marketplace"
+            )}
+          </Button>
+        </div>
       </div>
+
+      {/* ===================== */}
+      {/* RIGHT PANEL - AI/Test */}
+      {/* ===================== */}
+      <div className={`
+        ${isRightPanelOpen ? "w-80" : "w-0"} 
+        ${isMobile ? "absolute right-0 z-50 h-[calc(100vh-50px)] top-[50px] shadow-2xl" : "flex-shrink-0"}
+        flex flex-col border-l border-[var(--border)] 
+        bg-[var(--surface)] transition-all duration-200 overflow-hidden
+      `}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-indigo-500 flex items-center justify-center">
+              {isTestModeEnabled ? (
+                <FlaskConical className="w-3 h-3 text-white" />
+              ) : (
+                <Sparkles className="w-3 h-3 text-white" />
+              )}
+            </div>
+            <span className="font-semibold text-sm">
+              {isTestModeEnabled ? "Test & Preview" : "AI Co-Builder"}
+            </span>
+          </div>
+          <button
+            onClick={() => setIsRightPanelOpen(false)}
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {isTestModeEnabled ? (
+            <TestPanel 
+              nodes={nodes}
+              edges={edges}
+              onClose={() => setIsTestModeEnabled(false)} 
+            />
+          ) : (
+            <AISidebar />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================
+// MAIN EXPORT
+// =====================
+
+/**
+ * Builder component with ReactFlowProvider wrapper
+ * Required for React Flow hooks to work
+ */
+export default function Builder() {
+  return (
+    <ReactFlowProvider>
+      <BuilderCanvas />
     </ReactFlowProvider>
   );
-};
-
-export default Builder;
+}

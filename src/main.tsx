@@ -2,94 +2,18 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-
-import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import { publicProvider } from "wagmi/providers/public";
-import { mainnet, polygon } from "wagmi/chains";
-import { InjectedConnector } from "wagmi/connectors/injected";
-import { WalletConnectConnector } from "@wagmi/connectors/walletConnect";
-import { PrivyProvider } from "@privy-io/react-auth";
-import { Chain } from "wagmi";
-
-const polygonAmoy: Chain = {
-  id: 80002,
-  name: "Polygon Amoy",
-  network: "polygon-amoy",
-  nativeCurrency: {
-    decimals: 18,
-    name: "MATIC",
-    symbol: "MATIC",
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc-amoy.polygon.technology/"],
-    },
-    public: {
-      http: ["https://rpc-amoy.polygon.technology/"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "PolygonScan",
-      url: "https://amoy.polygonscan.com",
-    },
-  },
-  testnet: true,
-};
-
-interface ImportMetaEnv {
-  readonly VITE_PRIVY_APP_ID?: string;
-  readonly VITE_WALLET_CONNECT_PROJECT_ID?: string;
-  readonly VITE_API_URL?: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
-const WALLET_CONNECT_PROJECT_ID = (
-  import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID ||
-  ""
-).toString();
-
-const PRIVY_APP_ID = (
-  import.meta.env.VITE_PRIVY_APP_ID ||
-  ""
-).toString();
-
-const { chains, publicClient } = configureChains(
-  [polygonAmoy, polygon, mainnet],
-  [publicProvider()]
-);
-
-const wagmiConfig = createConfig({
-  autoConnect: true,
-  connectors: [
-    new InjectedConnector({ chains }),
-    new WalletConnectConnector({
-      chains,
-      options: {
-        projectId: WALLET_CONNECT_PROJECT_ID,
-        showQrModal: true,
-        metadata: {
-          name: "RealFlow Studio",
-          description: "AI-driven RWA marketplace builder",
-          url: typeof window !== "undefined" ? window.location.origin : "https://example.com",
-          icons: [],
-        },
-      },
-    }),
-  ],
-  publicClient,
-  chains,
-});
+import { ThemeProvider } from "next-themes";
+import { PrivyWalletProvider } from "./providers/PrivyWalletProvider";
+import { LoginModalProvider } from "./providers/LoginModalProvider";
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <WagmiConfig config={wagmiConfig}>
-      <PrivyProvider appId={PRIVY_APP_ID}>
-        <App />
-      </PrivyProvider>
-    </WagmiConfig>
+    <PrivyWalletProvider>
+      <LoginModalProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <App />
+        </ThemeProvider>
+      </LoginModalProvider>
+    </PrivyWalletProvider>
   </React.StrictMode>,
 );

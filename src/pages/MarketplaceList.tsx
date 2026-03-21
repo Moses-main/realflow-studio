@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Package, Plus, MoreVertical, ExternalLink, Trash2, Edit, 
-  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon
+  Copy, Eye, TrendingUp, Clock, Check, Copy as CopyIcon, Search, Building2, Palette, Coins, Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +21,21 @@ import {
 } from "@/components/ui/dialog";
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
+
+const categories = [
+  { id: "all", label: "All", icon: Package },
+  { id: "real-estate", label: "Real Estate", icon: Building2 },
+  { id: "art", label: "Art & Collectibles", icon: Palette },
+  { id: "commodities", label: "Commodities", icon: Coins },
+];
 
 const mockMarketplaces = [
   { 
     id: "1", 
     name: "Lagos Real Estate Hub", 
     status: "live", 
+    category: "real-estate",
     assets: 24, 
     volume: "$142K",
     address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0f123",
@@ -36,6 +45,7 @@ const mockMarketplaces = [
     id: "2", 
     name: "Buenos Aires Art Market", 
     status: "draft", 
+    category: "art",
     assets: 8, 
     volume: "$0",
     address: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
@@ -45,6 +55,7 @@ const mockMarketplaces = [
     id: "3", 
     name: "Mexico Commodity Exchange", 
     status: "live", 
+    category: "commodities",
     assets: 56, 
     volume: "$890K",
     address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
@@ -55,11 +66,19 @@ const mockMarketplaces = [
 const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces[0] }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(marketplace.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareLink = () => {
+    const url = `${window.location.origin}/marketplaces/${marketplace.id}`;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   return (
@@ -77,7 +96,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
           } flex items-center justify-center`}>
             <Package className="w-6 h-6 text-primary-foreground" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-1.5">
             <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
               marketplace.status === "live" 
                 ? "bg-primary/10 text-primary" 
@@ -86,43 +105,50 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
               {marketplace.status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
               {marketplace.status === "live" ? "Live" : "Draft"}
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowDetails(true)}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/builder">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={copyAddress}>
-                  {copied ? <Check className="w-4 h-4 mr-2" /> : <CopyIcon className="w-4 h-4 mr-2" />}
-                  {copied ? "Copied!" : "Copy Address"}
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <a href={`https://amoy.polygonscan.com/address/${marketplace.address}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View on Explorer
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <span className="text-xs text-muted-foreground capitalize">
+              {marketplace.category?.replace("-", " & ")}
+            </span>
           </div>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 absolute top-4 right-4">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={shareLink}>
+              <Share2 className="w-4 h-4 mr-2" />
+              {linkCopied ? "Link Copied!" : "Share Link"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowDetails(true)}>
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/canvas">
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={copyAddress}>
+              {copied ? <Check className="w-4 h-4 mr-2" /> : <CopyIcon className="w-4 h-4 mr-2" />}
+              {copied ? "Copied!" : "Copy Address"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={`https://amoy.polygonscan.com/address/${marketplace.address}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Explorer
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Link to="/builder" className="block mb-3">
+        <Link to={`/marketplaces/${marketplace.id}`} className="block mb-3">
           <h3 className="font-semibold hover:text-primary transition-colors">{marketplace.name}</h3>
         </Link>
         
@@ -143,7 +169,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
             {marketplace.createdAt}
           </span>
           <Button variant="outline" size="sm" asChild>
-            <Link to="/builder">Edit</Link>
+            <Link to="/canvas">Edit</Link>
           </Button>
         </div>
       </motion.div>
@@ -161,16 +187,16 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
                 <p className="font-medium capitalize">{marketplace.status}</p>
               </div>
               <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Category</p>
+                <p className="font-medium capitalize">{marketplace.category?.replace("-", " & ")}</p>
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Assets</p>
                 <p className="font-medium">{marketplace.assets}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Volume</p>
                 <p className="font-medium">{marketplace.volume}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-medium">{marketplace.createdAt}</p>
               </div>
             </div>
             <div className="space-y-1">
@@ -198,12 +224,19 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
 };
 
 const MarketplaceList = () => {
-  const { user, connectWallet } = useAuth();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<"all" | "live" | "draft">("all");
+  const [category, setCategory] = useState("all");
+  const [search, setSearch] = useState("");
 
-  const filteredMarketplaces = mockMarketplaces.filter(m => 
-    filter === "all" || m.status === filter
-  );
+  const filteredMarketplaces = mockMarketplaces.filter(m => {
+    const matchesFilter = filter === "all" || m.status === filter;
+    const matchesCategory = category === "all" || m.category === category;
+    const matchesSearch = search === "" || 
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.address.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -214,17 +247,9 @@ const MarketplaceList = () => {
         <header className="sticky top-0 z-30 glass-strong border-b border-border px-4 py-4 lg:px-8 lg:h-16 flex items-center justify-between lg:justify-end gap-4">
           <h1 className="text-lg font-semibold lg:hidden">My Marketplaces</h1>
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            {user.isWalletConnected ? (
-              <Button variant="outline" size="sm" className="gap-2 flex-1 lg:flex-none">
-                12.4 MATIC
-              </Button>
-            ) : (
-              <Button size="sm" className="gap-2 flex-1 lg:flex-none" onClick={connectWallet}>
-                Connect Wallet
-              </Button>
-            )}
+            <ConnectButton variant="outline" size="sm" />
             <Button size="sm" className="gap-2" asChild>
-              <Link to="/builder">
+              <Link to="/canvas">
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">New</span>
               </Link>
@@ -233,22 +258,53 @@ const MarketplaceList = () => {
         </header>
 
         <div className="p-4 lg:p-8 space-y-6">
-          {/* Filter Tabs */}
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search marketplaces..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {(["all", "live", "draft"] as const).map((f) => (
+                <Button
+                  key={f}
+                  variant={filter === f ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilter(f)}
+                  className="capitalize whitespace-nowrap"
+                >
+                  {f === "all" ? "All" : f === "live" ? "Live" : "Draft"}
+                  <span className="ml-2 text-xs opacity-70">
+                    ({f === "all" ? mockMarketplaces.length : mockMarketplaces.filter(m => m.status === f).length})
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category Filter */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {(["all", "live", "draft"] as const).map((f) => (
-              <Button
-                key={f}
-                variant={filter === f ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(f)}
-                className="capitalize whitespace-nowrap"
-              >
-                {f === "all" ? "All" : f === "live" ? "Live" : "Draft"}
-                <span className="ml-2 text-xs opacity-70">
-                  ({f === "all" ? mockMarketplaces.length : mockMarketplaces.filter(m => m.status === f).length})
-                </span>
-              </Button>
-            ))}
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <Button
+                  key={cat.id}
+                  variant={category === cat.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategory(cat.id)}
+                  className="gap-1.5 whitespace-nowrap"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {cat.label}
+                </Button>
+              );
+            })}
           </div>
 
           {/* Stats Summary */}
@@ -289,7 +345,7 @@ const MarketplaceList = () => {
                 }
               </p>
               <Button asChild>
-                <Link to="/builder">
+                <Link to="/canvas">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Marketplace
                 </Link>

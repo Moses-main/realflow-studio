@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Bell, Shield, Palette,
-  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock, BadgeCheck, FlaskConical, Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,40 @@ import {
 } from "@/components/ui/card";
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
+import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTheme } from "@/components/theme/ThemeProvider";
+
+interface ProfileForm {
+  username: string;
+  email: string;
+  bio: string;
+}
+
+interface Transaction {
+  hash: string;
+  type: "deploy" | "mint" | "transfer" | "swap";
+  amount: string;
+  timestamp: string;
+  status: "success" | "pending" | "failed";
+  description: string;
+}
+
+const mockTransactions: Transaction[] = [
+  { hash: "0x8f2e9...4a7b1", type: "deploy", amount: "0.023 MATIC", timestamp: "2 mins ago", status: "success", description: "MarketplaceFactory deployed" },
+  { hash: "0x3c4d5...9e2f0", type: "mint", amount: "100 ERC-1155", timestamp: "15 mins ago", status: "success", description: "Tokenized Lagos Property" },
+  { hash: "0x7b8c9...1d3e4", type: "transfer", amount: "0.005 MATIC", timestamp: "1 hour ago", status: "success", description: "Storage deposit" },
+  { hash: "0x2a3b4...5c6d7", type: "swap", amount: "50 ERC-1155", timestamp: "3 hours ago", status: "success", description: "Fraction purchased" },
+  { hash: "0x1x2y3...8z9w0", type: "deploy", amount: "0.021 MATIC", timestamp: "1 day ago", status: "success", description: "RWATokenizer deployed" },
+];
+
+const MOCK_MODE_KEY = "realflow-mock-mode";
 
 const Settings = () => {
-  const { user, connectWallet } = useAuth();
+  const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -35,6 +66,65 @@ const Settings = () => {
     marketing: false,
   });
   const [copied, setCopied] = useState(false);
+  const { profile, updateProfile } = useUserProfile();
+  const [localProfile, setLocalProfile] = useState(profile);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [mockMode, setMockMode] = useState(() => {
+    const saved = localStorage.getItem(MOCK_MODE_KEY);
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(MOCK_MODE_KEY, String(mockMode));
+  }, [mockMode]);
+
+  useEffect(() => {
+    setLocalProfile(profile);
+  }, [profile]);
+
+  const handleProfileChange = (field: keyof ProfileForm, value: string) => {
+    setLocalProfile(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!localProfile.username.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Username is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (localProfile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(localProfile.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      updateProfile(localProfile);
+      setHasChanges(false);
+      toast({
+        title: "Success",
+        description: "Profile saved successfully",
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to save profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const copyAddress = () => {
     if (user.address) {
@@ -98,11 +188,22 @@ const Settings = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="username">Username</Label>
-                      <Input id="username" placeholder="Enter username" />
+                      <Input 
+                        id="username" 
+                        placeholder="Enter username"
+                        value={localProfile.username}
+                        onChange={(e) => handleProfileChange("username", e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="Enter email" />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="Enter email"
+                        value={localProfile.email}
+                        onChange={(e) => handleProfileChange("email", e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -112,22 +213,74 @@ const Settings = () => {
                       id="bio"
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       placeholder="Tell us about yourself"
+                      value={localProfile.bio}
+                      onChange={(e) => handleProfileChange("bio", e.target.value)}
                     />
                   </div>
 
-                  <Button>Save Changes</Button>
+                  <Button onClick={handleSaveProfile} disabled={isSaving || !hasChanges}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            <TabsContent value="wallet" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Connected Wallet</CardTitle>
-                  <CardDescription>Manage your connected wallet</CardDescription>
+                  <CardTitle>Developer Options</CardTitle>
+                  <CardDescription>Options for testing and development</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {user.isWalletConnected ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${mockMode ? "bg-amber-500/10" : "bg-muted"}`}>
+                        <FlaskConical className={`w-5 h-5 ${mockMode ? "text-amber-500" : "text-muted-foreground"}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium">Mock Data Mode</p>
+                        <p className="text-sm text-muted-foreground">Use simulated data instead of live blockchain</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={mockMode}
+                      onCheckedChange={(checked) => {
+                        setMockMode(checked);
+                        toast({
+                          title: checked ? "Mock Mode Enabled" : "Mock Mode Disabled",
+                          description: checked 
+                            ? "App will use simulated data for testing" 
+                            : "App will connect to live blockchain",
+                        });
+                      }}
+                    />
+                  </div>
+                  {mockMode && (
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <p className="text-sm text-amber-500 font-medium mb-1">Mock Mode Active</p>
+                      <p className="text-xs text-amber-500/80">
+                        All marketplace data, transactions, and wallet balances are simulated for testing purposes.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account</CardTitle>
+                  <CardDescription>Manage your account and wallet</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {user.isAuthenticated ? (
                     <>
                       <div className="flex items-center justify-between p-4 rounded-lg border">
                         <div className="flex items-center gap-3">
@@ -135,9 +288,9 @@ const Settings = () => {
                             <Wallet className="w-5 h-5 text-primary-foreground" />
                           </div>
                           <div>
-                            <p className="font-medium capitalize">{user.walletType || "Wallet"}</p>
+                            <p className="font-medium">{user.email || "Wallet Connected"}</p>
                             <p className="text-sm text-muted-foreground font-mono">
-                              {user.address}
+                              {user.address ? `${user.address.slice(0, 10)}...${user.address.slice(-6)}` : ""}
                             </p>
                           </div>
                         </div>
@@ -146,15 +299,95 @@ const Settings = () => {
                         </Button>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1">View on Explorer</Button>
-                        <Button variant="destructive" className="flex-1">Disconnect</Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => user.address && window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          View on Explorer
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          className="flex-1"
+                          onClick={logout}
+                        >
+                          Sign Out
+                        </Button>
                       </div>
                     </>
                   ) : (
                     <div className="text-center py-8">
                       <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground mb-4">No wallet connected</p>
-                      <Button onClick={connectWallet}>Connect Wallet</Button>
+                      <p className="text-muted-foreground mb-4">Not signed in</p>
+                      <ConnectButton variant="default" size="md" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Transaction History</CardTitle>
+                  <CardDescription>View your past transactions on Polygon Amoy</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {mockTransactions.length > 0 ? (
+                    <div className="space-y-3">
+                      {mockTransactions.map((tx) => (
+                        <div 
+                          key={tx.hash}
+                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-secondary/30 transition-colors cursor-pointer"
+                          onClick={() => window.open(`https://amoy.polygonscan.com/tx/${tx.hash}`, "_blank")}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                            tx.type === "deploy" ? "bg-primary/10" :
+                            tx.type === "mint" ? "bg-accent/10" :
+                            tx.type === "transfer" ? "bg-amber-500/10" : "bg-green-500/10"
+                          }`}>
+                            {tx.type === "deploy" ? <ArrowUpRight className="w-4 h-4 text-primary" /> :
+                             tx.type === "mint" ? <ArrowUpRight className="w-4 h-4 text-accent" /> :
+                             tx.type === "transfer" ? <ArrowDownLeft className="w-4 h-4 text-amber-500" /> :
+                             <ArrowUpRight className="w-4 h-4 text-green-500" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate">{tx.description}</p>
+                              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                                tx.status === "success" ? "bg-primary/10 text-primary" :
+                                tx.status === "pending" ? "bg-amber-500/10 text-amber-500" :
+                                "bg-destructive/10 text-destructive"
+                              }`}>
+                                {tx.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono">{tx.hash}</span>
+                              <span>•</span>
+                              <span>{tx.amount}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {tx.timestamp}
+                              </span>
+                            </div>
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                        </div>
+                      ))}
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-4"
+                        onClick={() => user.address && window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
+                      >
+                        View All on Explorer
+                        <ExternalLink className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">No transactions yet</p>
                     </div>
                   )}
                 </CardContent>
@@ -167,7 +400,13 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>RWATokenizer Address</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>RWATokenizer Address</Label>
+                      <span className="flex items-center gap-1 text-xs text-primary">
+                        <BadgeCheck className="w-4 h-4" />
+                        Verified
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <Input 
                         value="0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be" 
@@ -177,10 +416,19 @@ const Settings = () => {
                       <Button variant="outline" onClick={copyAddress}>
                         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </Button>
+                      <Button variant="outline" onClick={() => window.open("https://amoy.polygonscan.com/address/0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be#contracts", "_blank")}>
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>MarketplaceFactory Address</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>MarketplaceFactory Address</Label>
+                      <span className="flex items-center gap-1 text-xs text-primary">
+                        <BadgeCheck className="w-4 h-4" />
+                        Verified
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <Input 
                         value="0x802A6843516f52144b3F1D04E5447A085d34aF37" 
@@ -189,6 +437,9 @@ const Settings = () => {
                       />
                       <Button variant="outline" onClick={copyAddress}>
                         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="outline" onClick={() => window.open("https://amoy.polygonscan.com/address/0x802A6843516f52144b3F1D04E5447A085d34aF37#contracts", "_blank")}>
+                        <ExternalLink className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -281,7 +532,7 @@ const Settings = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>Theme</Label>
-                    <Select defaultValue="dark">
+                    <Select value={theme} onValueChange={(val) => setTheme(val as any)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

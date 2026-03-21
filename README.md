@@ -29,7 +29,7 @@ RealFlow Studio enables non-technical users (real estate agents, artists, entrep
 ### Tech Stack
 - **Frontend**: React, TypeScript, Vite, TailwindCSS, React Flow
 - **Backend**: Express.js, Node.js
-- **Smart Contracts**: Solidity, OpenZeppelin, Hardhat/Foundry
+- **Smart Contracts**: Solidity, OpenZeppelin, Foundry
 - **Blockchain**: Polygon Amoy (chain ID: 80002)
 - **AI**: OpenAI GPT-4
 - **Storage**: IPFS via Pinata

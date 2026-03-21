@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Send, Copy, Check, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Send, Copy, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,161 +20,6 @@ interface Message {
   code?: string;
   vibeMode?: boolean;
 }
-
-const AISidebar = () => {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "ai",
-      content: "Hey! I'm your AI co-builder 🤖 I can generate smart contract code, suggest optimizations, and help you design your marketplace. Try asking me anything!",
-    },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState<number | null>(null);
-  const [vibeMode, setVibeMode] = useState(true);
-  const { user } = useAuth();
-
-  const callAIAPI = async (text: string): Promise<Message> => {
-    try {
-      const response = await fetch(`${API_URL}/api/ai/generate-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: text,
-          contractType: "custom",
-          vibeMode,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("AI service unavailable");
-      }
-
-      const data = await response.json();
-      return {
-        role: "ai",
-        content: vibeMode 
-          ? "Here's some fresh code with maximum vibes! 🔥✨" 
-          : "Here's the generated smart contract code:",
-        code: data.code,
-        vibeMode,
-      };
-    } catch (error) {
-      console.error("AI API error:", error);
-      return {
-        role: "ai",
-        content: "Oops! The AI service is taking a break 😴. Here's a template to get you started:",
-        code: generateFallbackContract(text),
-        vibeMode,
-      };
-    }
-  };
-
-  const handleSend = useCallback(async (text: string) => {
-    if (!text.trim()) return;
-    
-    const userMsg: Message = { role: "user", content: text };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setLoading(true);
-
-    const aiResponse = await callAIAPI(text);
-    setMessages((prev) => [...prev, aiResponse]);
-    setLoading(false);
-  }, [vibeMode]);
-
-  const copyCode = (code: string, idx: number) => {
-    navigator.clipboard.writeText(code);
-    setCopied(idx);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <span className="font-semibold text-sm">AI Co-Builder</span>
-        <button
-          onClick={() => setVibeMode(!vibeMode)}
-          className={`ml-auto text-xs px-2 py-0.5 rounded-full transition-colors ${
-            vibeMode 
-              ? "bg-primary/10 text-primary" 
-              : "bg-secondary text-muted-foreground"
-          }`}
-        >
-          {vibeMode ? "🔥 Creative" : "📝 Normal"}
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((m, i) => (
-          <div key={i} className={`${m.role === "user" ? "ml-8" : "mr-4"}`}>
-            <div className={`rounded-xl p-3 text-sm ${
-              m.role === "user" 
-                ? "bg-primary/10 text-foreground" 
-                : "glass"
-            }`}>
-              {m.content}
-            </div>
-            {m.code && (
-              <div className="mt-2 relative group">
-                <pre className="bg-background rounded-lg p-3 text-xs font-mono overflow-x-auto border border-border max-h-64 overflow-y-auto">
-                  <code>{m.code}</code>
-                </pre>
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 w-7 p-0"
-                    onClick={() => copyCode(m.code!, i)}
-                  >
-                    {copied === i ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        {loading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            {vibeMode ? "Vibing with code..." : "Generating..."}
-          </div>
-        )}
-      </div>
-
-      <div className="px-4 pb-2">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              onClick={() => handleSend(s)}
-              disabled={loading}
-              className="shrink-0 text-xs px-3 py-1.5 rounded-full glass hover:border-primary/40 transition-colors disabled:opacity-50"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="p-4 pt-0">
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend(input)}
-            placeholder="Ask AI to generate code..."
-            className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <Button size="sm" className="h-9 w-9 p-0" onClick={() => handleSend(input)} disabled={loading}>
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 function generateFallbackContract(description: string): string {
   return `// SPDX-License-Identifier: MIT
@@ -200,5 +45,166 @@ contract GeneratedToken is ERC1155, Ownable {
     }
 }`;
 }
+
+const AISidebar = () => {
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "ai",
+      content: "Hey! I'm your AI co-builder 🤖 I can generate smart contract code, suggest optimizations, and help you design your marketplace. Try asking me anything!",
+    },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState<number | null>(null);
+  const [vibeMode, setVibeMode] = useState(true);
+  const { user } = useAuth();
+
+  const callAIAPI = useCallback(async (text: string, isVibeMode: boolean): Promise<Message> => {
+    try {
+      const response = await fetch(`${API_URL}/api/ai/generate-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: text,
+          contractType: "custom",
+          vibeMode: isVibeMode,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("AI service unavailable");
+      }
+
+      const data = await response.json();
+      return {
+        role: "ai",
+        content: isVibeMode 
+          ? "Here's some fresh code with maximum vibes! 🔥✨" 
+          : "Here's the generated smart contract code:",
+        code: data.code,
+        vibeMode: isVibeMode,
+      };
+    } catch (error) {
+      console.error("AI API error:", error);
+      return {
+        role: "ai",
+        content: "Oops! The AI service is taking a break 😴. Here's a template to get you started:",
+        code: generateFallbackContract(text),
+        vibeMode: isVibeMode,
+      };
+    }
+  }, []);
+
+  const handleSend = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    
+    const userMsg: Message = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    const aiResponse = await callAIAPI(text, vibeMode);
+    setMessages((prev) => [...prev, aiResponse]);
+    setLoading(false);
+  }, [callAIAPI, vibeMode]);
+
+  const copyCode = (code: string, idx: number) => {
+    navigator.clipboard.writeText(code);
+    setCopied(idx);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+        <Sparkles className="w-4 h-4 text-primary" />
+        <span className="font-semibold text-sm">AI Co-Builder</span>
+        <button
+          onClick={() => setVibeMode(!vibeMode)}
+          className={`ml-auto text-xs px-2 py-0.5 rounded-full transition-colors ${
+            vibeMode 
+              ? "bg-primary/10 text-primary" 
+              : "bg-secondary text-muted-foreground"
+          }`}
+        >
+          {vibeMode ? "🔥 Creative" : "📝 Normal"}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+        {messages.map((m, i) => (
+          <div key={i} className={`${m.role === "user" ? "ml-8" : "mr-4"}`}>
+            <div className={`rounded-xl p-3 text-sm ${
+              m.role === "user" 
+                ? "bg-primary/10 text-foreground" 
+                : "glass"
+            }`}>
+              {m.content}
+            </div>
+            {m.code && (
+              <div className="mt-2 relative group">
+                <pre className="bg-background rounded-lg p-3 text-xs font-mono overflow-x-auto border border-border max-h-48 overflow-y-auto">
+                  <code>{m.code}</code>
+                </pre>
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => copyCode(m.code!, i)}
+                  >
+                    {copied === i ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {vibeMode ? "Vibing with code..." : "Generating..."}
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 pb-2 shrink-0">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              onClick={() => handleSend(s)}
+              disabled={loading}
+              className="shrink-0 text-xs px-3 py-1.5 rounded-full glass hover:border-primary/40 transition-colors disabled:opacity-50"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 pt-0 shrink-0 bg-background/80 backdrop-blur-sm">
+        <div className="flex gap-2 items-center">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend(input);
+              }
+            }}
+            placeholder="Ask AI to generate code..."
+            rows={1}
+            className="flex-1 bg-secondary rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] max-h-32 resize-none"
+          />
+          <Button size="sm" className="h-11 w-11 p-0 shrink-0" onClick={() => handleSend(input)} disabled={loading || !input.trim()}>
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default AISidebar;

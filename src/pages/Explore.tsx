@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Globe, Search, Filter, MapPin, TrendingUp, Users,
@@ -97,24 +97,28 @@ const Explore = () => {
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState("trending");
 
-  const filteredMarketplaces = featuredMarketplaces.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.location.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category === "all" || 
-      m.category.toLowerCase().replace(" ", "-") === category;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredMarketplaces = useMemo(() => {
+    return featuredMarketplaces.filter(m => {
+      const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.location.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = category === "all" || 
+        m.category.toLowerCase().replace(" ", "-") === category;
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, category]);
 
-  const sortedMarketplaces = [...filteredMarketplaces].sort((a, b) => {
-    if (sortBy === "trending") {
-      return parseFloat(b.trend) - parseFloat(a.trend);
-    } else if (sortBy === "volume") {
-      return parseFloat(b.volume.replace(/[^0-9.]/g, '')) - parseFloat(a.volume.replace(/[^0-9.]/g, ''));
-    } else if (sortBy === "assets") {
-      return b.assets - a.assets;
-    }
-    return 0;
-  });
+  const sortedMarketplaces = useMemo(() => {
+    return [...filteredMarketplaces].sort((a, b) => {
+      if (sortBy === "trending") {
+        return parseFloat(b.trend) - parseFloat(a.trend);
+      } else if (sortBy === "volume") {
+        return parseFloat(b.volume.replace(/[^0-9.]/g, '')) - parseFloat(a.volume.replace(/[^0-9.]/g, ''));
+      } else if (sortBy === "assets") {
+        return b.assets - a.assets;
+      }
+      return 0;
+    });
+  }, [filteredMarketplaces, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -240,7 +244,7 @@ const Explore = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
-                        {Math.floor(Math.random() * 500) + 100}
+                        {Math.floor(parseInt(marketplace.id) * 137.5) + 100}
                       </span>
                     </div>
 
