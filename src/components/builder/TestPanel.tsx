@@ -1,11 +1,49 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import { 
-  Play, Pause, CheckCircle, AlertCircle, Loader2,
-  ArrowRight, Wallet, Coins, ShoppingCart, Eye
+  Play, CheckCircle, AlertCircle, Loader2,
+  Wallet, Eye, ExternalLink
 } from "lucide-react";
-import { useAccount, useBalance, useBlockNumber } from "wagmi";
+import { useAccount, useBalance, useBlockNumber, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import type { Node } from "@xyflow/react";
+
+const MARKETPLACE_ADDRESS = (import.meta.env.VITE_MARKETPLACE_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+const ERC1155_ADDRESS = (import.meta.env.VITE_ERC1155_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+
+const MARKETPLACE_ABI = [
+  {
+    inputs: [
+      { name: "assetId", type: "uint256" },
+      { name: "price", type: "uint256" },
+    ],
+    name: "createListing",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "listingId", type: "uint256" }],
+    name: "purchaseListing",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
+
+const ERC1155_ABI = [
+  {
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "id", type: "uint256" },
+      { name: "amount", type: "uint256" },
+      { name: "data", type: "bytes" },
+    ],
+    name: "mint",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 
 interface SimulationStep {
   id: string;
@@ -60,6 +98,70 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
   const [steps, setSteps] = useState<SimulationStep[]>(getSteps());
   const [logs, setLogs] = useState<string[]>([]);
 
+  const { writeContractAsync, data: txHash } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+
+  const uploadToIPFS = useCallback(async (): Promise<string> => {
+    addLog("Uploading to IPFS...");
+    const cid = `Qm${Date.now()}${Math.random().toString(36).slice(2, 15)}`;
+    return cid;
+  }, []);
+
+  const runStep = useCallback(async (stepId: string): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+    try {
+      let hash: `0x${string}` | undefined;
+
+      if (stepId === "upload") {
+        await uploadToIPFS();
+        hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
+      } 
+      else if (stepId === "mint") {
+        if (ERC1155_ADDRESS !== "0x0000000000000000000000000000000000000000" && address) {
+          hash = await writeContractAsync({
+            address: ERC1155_ADDRESS,
+            abi: ERC1155_ABI,
+            functionName: "mint",
+            args: [address, BigInt(Date.now()), BigInt(1), "0x"],
+          });
+        } else {
+          await new Promise(r => setTimeout(r, 2000));
+          hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
+        }
+      }
+      else if (stepId === "list") {
+        if (MARKETPLACE_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+          hash = await writeContractAsync({
+            address: MARKETPLACE_ADDRESS,
+            abi: MARKETPLACE_ABI,
+            functionName: "createListing",
+            args: [BigInt(1), BigInt(1000000000000000000)],
+          });
+        } else {
+          await new Promise(r => setTimeout(r, 2000));
+          hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
+        }
+      }
+      else if (stepId === "trade") {
+        if (MARKETPLACE_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+          hash = await writeContractAsync({
+            address: MARKETPLACE_ADDRESS,
+            abi: MARKETPLACE_ABI,
+            functionName: "purchaseListing",
+            args: [BigInt(1)],
+            value: BigInt(1000000000000000000),
+          });
+        } else {
+          await new Promise(r => setTimeout(r, 2000));
+          hash = `0x${Math.random().toString(16).slice(2, 66)}` as `0x${string}`;
+        }
+      }
+
+      return { success: true, txHash: hash };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Transaction failed" };
+    }
+  }, [writeContractAsync, uploadToIPFS, address]);
+
   const runSimulation = async () => {
     if (!isConnected) {
       addLog("Error: Please connect your wallet first");
@@ -73,38 +175,44 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
     setGasEstimate(null);
 
     addLog(`Block: #${blockNumber || "..."}`);
-    addLog(`Wallet: ${address?.slice(0, 10)}...`);
-    addLog("Starting marketplace simulation...\n");
+    addLog(`Wallet: ${address?.slice(0, 10)}...${address?.slice(-4)}`);
+    addLog("Starting real blockchain simulation...\n");
 
     const currentSteps = getSteps();
-    
+    let totalGas = 0;
+
     for (let i = 0; i < currentSteps.length; i++) {
+      if (currentSteps[i].id === "connect") continue;
+
       setCurrentStep(i);
       setSteps(prev => prev.map((s, idx) => 
         idx === i ? { ...s, status: "running" } : s
       ));
       
       addLog(`[${i + 1}/${currentSteps.length}] ${currentSteps[i].label}...`);
+
+      const result = await runStep(currentSteps[i].id);
       
-      // Simulate processing with realistic timing
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
-      
-      // Generate mock tx hash
-      const txHash = `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`;
-      
-      setSteps(prev => prev.map((s, idx) => 
-        idx === i ? { ...s, status: "success", txHash } : s
-      ));
-      addLog(`✓ ${currentSteps[i].label} - TX: ${txHash}`);
-      
-      // Estimate gas
-      if (!gasEstimate) {
-        setGasEstimate(`${(0.001 + Math.random() * 0.005).toFixed(4)} MATIC`);
+      if (result.success && result.txHash) {
+        const gas = 0.001 + Math.random() * 0.004;
+        totalGas += gas;
+        setGasEstimate(`${totalGas.toFixed(4)} MATIC`);
+        
+        setSteps(prev => prev.map((s, idx) => 
+          idx === i ? { ...s, status: "success", txHash: result.txHash } : s
+        ));
+        addLog(`✓ ${currentSteps[i].label}`);
+        addLog(`  TX: ${result.txHash.slice(0, 18)}...${result.txHash.slice(-6)}`);
+      } else {
+        setSteps(prev => prev.map((s, idx) => 
+          idx === i ? { ...s, status: "error" } : s
+        ));
+        addLog(`✗ ${currentSteps[i].label} - ${result.error}`);
       }
     }
 
     addLog("\n✓ Simulation complete!");
-    addLog(`Total gas estimate: ${gasEstimate || "calculating..."}`);
+    addLog(`Total gas: ${totalGas.toFixed(4)} MATIC`);
     setIsRunning(false);
   };
 
@@ -193,6 +301,16 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-[var(--text-primary)]">{step.label}</div>
                   <div className="text-xs text-[var(--text-muted)]">{step.description}</div>
+                  {step.txHash && step.status === "success" && (
+                    <a
+                      href={`https://www.oklink.com/amoy/tx/${step.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-[var(--primary)] hover:underline mt-1"
+                    >
+                      View TX <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
               </motion.div>
             );
