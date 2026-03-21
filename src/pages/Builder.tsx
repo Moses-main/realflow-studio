@@ -627,7 +627,10 @@ function BuilderCanvas() {
           <div className="flex items-center gap-3">
             {/* Test Mode */}
             <button
-              onClick={() => setIsTestModeEnabled(!isTestModeEnabled)}
+              onClick={() => {
+                setIsTestModeEnabled(!isTestModeEnabled);
+                if (!isTestModeEnabled) setIsRightPanelOpen(true);
+              }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
                 isTestModeEnabled 
                   ? "bg-[var(--primary)]/20 text-[var(--primary)]" 

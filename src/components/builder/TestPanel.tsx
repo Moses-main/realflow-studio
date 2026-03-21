@@ -7,17 +7,7 @@ import {
 import { useAuth, shortenAddress } from "@/hooks/useAuth";
 import { useLoginModal } from "@/providers/LoginModalProvider";
 import type { Node, Edge } from "@xyflow/react";
-
-interface SimulationStep {
-  id: string;
-  label: string;
-  description: string;
-  status: "pending" | "running" | "success" | "error";
-  txHash?: string;
-  componentType: string;
-  gasUsed?: string;
-  testToken?: string;
-}
+import { FlowSimulator, SimulationStep, FlowSimulationOptions } from "@/utils/flowSimulator";
 
 interface TestPanelProps {
   nodes: Node[];
@@ -46,80 +36,29 @@ export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
   const [steps, setSteps] = useState<SimulationStep[]>([]);
   const [testBalance, setTestBalance] = useState("0.00");
 
-  // Generate steps based on canvas flow (following edges)
-  const generateFlowSteps = useCallback((): SimulationStep[] => {
-    if (nodes.length === 0) return [];
+   // Initialize flow simulator
+   const [flowSimulator, setFlowSimulator] = useState<FlowSimulator | null>(null);
+   
+   useEffect(() => {
+     if (nodes.length > 0 || edges.length > 0) {
+       const options: FlowSimulationOptions = {
+         startBalance: "100.00",
+         networkSymbol: selectedNetwork.symbol,
+         networkName: selectedNetwork.name
+       };
+       setFlowSimulator(new FlowSimulator(nodes, edges, options));
+     }
+   }, [nodes, edges, selectedNetwork]);
 
-    // Build flow order from edges
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-    const connectedNodes = new Set<string>();
-    edges.forEach(e => {
-      connectedNodes.add(e.source);
-      connectedNodes.add(e.target);
-    });
+   // Generate steps based on canvas flow (following edges)
+   const generateFlowSteps = useCallback((): SimulationStep[] => {
+     if (!flowSimulator) return [];
+     return flowSimulator.generateFlowSteps();
+   }, [flowSimulator]);
 
-    // Start with Asset Upload if exists, or first connected node
-    const flowSteps: SimulationStep[] = [];
-    const visited = new Set<string>();
-
-    // Find starting nodes (no incoming edges)
-    const incomingEdges = new Map<string, number>();
-    edges.forEach(e => {
-      incomingEdges.set(e.target, (incomingEdges.get(e.target) || 0) + 1);
-    });
-
-    const startNodes = nodes.filter(n => !incomingEdges.has(n.id) || connectedNodes.size === 0);
-    
-    // BFS through connected components
-    const queue = startNodes.map(n => n.id);
-    
-    while (queue.length > 0) {
-      const nodeId = queue.shift()!;
-      if (visited.has(nodeId)) continue;
-      visited.add(nodeId);
-
-      const node = nodeMap.get(nodeId);
-      if (!node) continue;
-
-      const componentType = node.data?.componentType as string;
-      const label = node.data?.label as string || componentType;
-
-      flowSteps.push({
-        id: nodeId,
-        label: getStepLabel(componentType, label),
-        description: getStepDescription(componentType),
-        status: "pending",
-        componentType,
-      });
-
-      // Add children to queue
-      edges.filter(e => e.source === nodeId).forEach(e => {
-        if (!visited.has(e.target)) {
-          queue.push(e.target);
-        }
-      });
-    }
-
-    // Add unvisited nodes
-    nodes.forEach(n => {
-      if (!visited.has(n.id)) {
-        const componentType = n.data?.componentType as string;
-        flowSteps.push({
-          id: n.id,
-          label: getStepLabel(componentType, n.data?.label as string || componentType),
-          description: getStepDescription(componentType),
-          status: "pending",
-          componentType,
-        });
-      }
-    });
-
-    return flowSteps;
-  }, [nodes, edges]);
-
-  useEffect(() => {
-    setSteps(generateFlowSteps());
-  }, [generateFlowSteps]);
+   useEffect(() => {
+     setSteps(generateFlowSteps());
+   }, [generateFlowSteps]);
 
   const getStepLabel = (type: string, label: string): string => {
     const labels: Record<string, string> = {
@@ -155,59 +94,129 @@ export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
   };
 
-  const runStep = async (step: SimulationStep): Promise<{ success: boolean; txHash?: string; error?: string; gas?: string }> => {
-    try {
-      const delay = 1500 + Math.random() * 1000;
-      
-      switch (step.componentType) {
-        case "assetUpload":
-          addLog(`Uploading metadata to IPFS...`);
-          await new Promise(r => setTimeout(r, delay));
-          const cid = `Qm${Math.random().toString(36).slice(2, 15)}`;
-          addLog(`✓ Uploaded to IPFS: ${cid}`);
-          return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gas: "0.0000" };
+   const runStep = async (step: SimulationStep): Promise<{ success: boolean; txHash?: string; error?: string; gasUsed: string }> => {
+     if (!flowSimulator) {
+       // Fallback to original implementation if simulator not ready
+       try {
+         const delay = 1500 + Math.random() * 1000;
+         
+         switch (step.componentType) {
+           case "assetUpload":
+             addLog(`Uploading metadata to IPFS...`);
+             await new Promise(r => setTimeout(r, delay));
+             const cid = `Qm${Math.random().toString(36).slice(2, 15)}`;
+             addLog(`✓ Uploaded to IPFS: ${cid}`);
+             return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gasUsed: "0.0000" };
 
-        case "mintButton":
-          addLog(`Minting ERC-1155 token on ${selectedNetwork.name}...`);
-          await new Promise(r => setTimeout(r, delay));
-          addLog(`✓ Token minted: #${Math.floor(Math.random() * 10000)}`);
-          return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gas: "0.0023" };
+           case "mintButton":
+             addLog(`Minting ERC-1155 token on ${selectedNetwork.name}...`);
+             await new Promise(r => setTimeout(r, delay));
+             addLog(`✓ Token minted: #${Math.floor(Math.random() * 10000)}`);
+             return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gasUsed: "0.0023" };
 
-        case "listingGrid":
-          addLog(`Creating marketplace listing...`);
-          await new Promise(r => setTimeout(r, delay));
-          const listingId = Math.floor(Math.random() * 1000);
-          addLog(`✓ Listed for sale: ID #${listingId}`);
-          return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gas: "0.0012" };
+           case "listingGrid":
+             addLog(`Creating marketplace listing...`);
+             await new Promise(r => setTimeout(r, delay));
+             const listingId = Math.floor(Math.random() * 1000);
+             addLog(`✓ Listed for sale: ID #${listingId}`);
+             return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gasUsed: "0.0012" };
 
-        case "buyButton":
-          addLog(`Processing purchase with ${selectedNetwork.symbol}...`);
-          await new Promise(r => setTimeout(r, delay));
-          addLog(`✓ Transfer completed`);
-          return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gas: "0.0045" };
+           case "buyButton":
+             addLog(`Processing purchase with ${selectedNetwork.symbol}...`);
+             await new Promise(r => setTimeout(r, delay));
+             addLog(`✓ Transfer completed`);
+             return { success: true, txHash: `0x${Math.random().toString(16).slice(2, 66)}`, gasUsed: "0.0045" };
 
-        case "walletConnect":
-          addLog(`Verifying wallet connection...`);
-          await new Promise(r => setTimeout(r, 500));
-          addLog(`✓ Wallet: ${shortenAddress(address)}`);
-          return { success: true, gas: "0.0000" };
+           case "walletConnect":
+             addLog(`Verifying wallet connection...`);
+             await new Promise(r => setTimeout(r, 500));
+             addLog(`✓ Wallet: ${shortenAddress(address)}`);
+             return { success: true, gasUsed: "0.0000" };
 
-        case "networkStatus":
-          addLog(`Checking ${selectedNetwork.name} network...`);
-          await new Promise(r => setTimeout(r, 500));
-          addLog(`✓ Network: ${selectedNetwork.name} | Block: #${Math.floor(Math.random() * 1000000) + 10000000}`);
-          return { success: true, gas: "0.0000" };
+           case "networkStatus":
+             addLog(`Checking ${selectedNetwork.name} network...`);
+             await new Promise(r => setTimeout(r, 500));
+             addLog(`✓ Network: ${selectedNetwork.name} | Block: #${Math.floor(Math.random() * 1000000) + 10000000}`);
+             return { success: true, gasUsed: "0.0000" };
 
-        default:
-          addLog(`Executing ${step.label}...`);
-          await new Promise(r => setTimeout(r, delay));
-          addLog(`✓ ${step.label} completed`);
-          return { success: true, gas: "0.0001" };
-      }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
-    }
-  };
+           default:
+             addLog(`Executing ${step.label}...`);
+             await new Promise(r => setTimeout(r, delay));
+             addLog(`✓ ${step.label} completed`);
+             return { success: true, gasUsed: "0.0001" };
+         }
+       } catch (err) {
+         // Fix: Return proper error object with gasUsed field
+         return { 
+           success: false, 
+           error: err instanceof Error ? err.message : "Unknown error",
+           gasUsed: "0.0000"
+         };
+       }
+     }
+     
+     // Use the flow simulator for deterministic, testable results
+     const result = await flowSimulator.runStep(step);
+     
+     // Add logs for each step type
+     switch (step.componentType) {
+       case "assetUpload":
+         addLog(`Uploading metadata to IPFS...`);
+         if (result.success) {
+           addLog(`✓ Uploaded to IPFS: ${result.txHash?.slice(0, 10)}...`);
+         }
+         break;
+         
+       case "mintButton":
+         addLog(`Minting ERC-1155 token on ${selectedNetwork.name}...`);
+         if (result.success) {
+           addLog(`✓ Token minted: #${Math.floor(Math.random() * 10000)}`);
+         }
+         break;
+         
+       case "listingGrid":
+         addLog(`Creating marketplace listing...`);
+         if (result.success) {
+           const listingId = Math.floor(Math.random() * 1000);
+           addLog(`✓ Listed for sale: ID #${listingId}`);
+         }
+         break;
+         
+       case "buyButton":
+         addLog(`Processing purchase with ${selectedNetwork.symbol}...`);
+         if (result.success) {
+           addLog(`✓ Transfer completed`);
+         }
+         break;
+         
+       case "walletConnect":
+         addLog(`Verifying wallet connection...`);
+         if (result.success) {
+           addLog(`✓ Wallet: ${shortenAddress(address)}`);
+         }
+         break;
+         
+       case "networkStatus":
+         addLog(`Checking ${selectedNetwork.name} network...`);
+         if (result.success) {
+           addLog(`✓ Network: ${selectedNetwork.name} | Block: #${Math.floor(Math.random() * 1000000) + 10000000}`);
+         }
+         break;
+         
+       default:
+         addLog(`Executing ${step.label}...`);
+         if (result.success) {
+           addLog(`✓ ${step.label} completed`);
+         }
+         break;
+     }
+     
+     if (!result.success) {
+       addLog(`✗ Error: ${result.error}`);
+     }
+     
+     return result;
+   };
 
   const runSimulation = async () => {
     if (!isConnected || steps.length === 0) return;
@@ -222,54 +231,50 @@ export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
     addLog(`Wallet: ${address}`);
     addLog(`Test Balance: 100.00 ${selectedNetwork.symbol}`);
     addLog(`Components: ${nodes.length} | Connections: ${edges.length}`);
-    addLog(``);
+     addLog(``);
+ 
+     let gasSum = 0;
+ 
+     for (let i = 0; i < steps.length; i++) {
+    setCurrentStep(i);
+    
+    setSteps(prev => prev.map((s, idx) => 
+      idx === i ? { ...s, status: "running" } : s
+    ));
 
-    let gasSum = 0;
+    const result = await runStep(steps[i]);
 
-    for (let i = 0; i < steps.length; i++) {
-      setCurrentStep(i);
+    if (result.success) {
+      const gas = parseFloat(result.gasUsed || "0.0001");
+      gasSum += gas;
+      setTestBalance(prev => (parseFloat(prev) - gas).toFixed(2));
+      setTotalGas(gasSum.toFixed(4));
       
       setSteps(prev => prev.map((s, idx) => 
-        idx === i ? { ...s, status: "running" } : s
+        idx === i ? { 
+          ...s, 
+          status: "success", 
+          txHash: result.txHash,
+          gasUsed: result.gasUsed 
+        } : s
       ));
-
-      const result = await runStep(steps[i]);
-
-      if (result.success) {
-        const gas = parseFloat(result.gas || "0.0001");
-        gasSum += gas;
-        setTestBalance(prev => (parseFloat(prev) - gas).toFixed(2));
-        setTotalGas(gasSum.toFixed(4));
-
-        setSteps(prev => prev.map((s, idx) => 
-          idx === i ? { 
-            ...s, 
-            status: "success", 
-            txHash: result.txHash,
-            gasUsed: result.gas 
-          } : s
-        ));
-
-        if (i < steps.length - 1) {
-          addLog(`↓ Flow: ${steps[i].label} → ${steps[i + 1].label}`);
-        }
-      } else {
-        setSteps(prev => prev.map((s, idx) => 
-          idx === i ? { ...s, status: "error" } : s
-        ));
-        addLog(`✗ Error: ${result.error}`);
-        break;
-      }
+    } else {
+      setSteps(prev => prev.map((s, idx) => 
+        idx === i ? { ...s, status: "error" } : s
+      ));
+      addLog(`✗ Error: ${result.error}`);
+      break;
     }
+  }
 
-    addLog(``);
-    addLog(`=== Simulation Complete ===`);
-    addLog(`Total Gas Used: ${gasSum.toFixed(4)} ${selectedNetwork.symbol}`);
-    addLog(`Remaining Balance: ${testBalance} ${selectedNetwork.symbol}`);
+  addLog(``);
+  addLog(`=== Simulation Complete ===`);
+  addLog(`Total Gas Used: ${gasSum.toFixed(4)} ${selectedNetwork.symbol}`);
+  addLog(`Remaining Balance: ${testBalance} ${selectedNetwork.symbol}`);
 
-    setIsRunning(false);
-    setCurrentStep(steps.length);
-  };
+  setIsRunning(false);
+  setCurrentStep(steps.length);
+};
 
   const resetSimulation = () => {
     setSteps(generateFlowSteps());
