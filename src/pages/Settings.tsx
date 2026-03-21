@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ConnectButton } from "@/components/auth/ConnectButton";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 interface ProfileForm {
   username: string;
@@ -56,6 +57,7 @@ const MOCK_MODE_KEY = "realflow-mock-mode";
 
 const Settings = () => {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState({
     email: true,
@@ -530,7 +532,7 @@ const Settings = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>Theme</Label>
-                    <Select defaultValue="dark">
+                    <Select value={theme} onValueChange={(val) => setTheme(val as any)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
