@@ -97,7 +97,7 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : "Transaction failed" };
     }
-  }, [writeMint, uploadToIPFS]);
+  }, [uploadToIPFS]);
 
   const runSimulation = async () => {
     if (!isConnected) {
