@@ -30,20 +30,6 @@ function areStatesEqual(a: HistoryState, b: HistoryState): boolean {
   return nodesJson === nodesJsonB && edgesJson === edgesJsonB;
 }
 
-/**
- * Hook for undo/redo functionality in the canvas builder
- * 
- * Features:
- * - Stores history of node and edge states
- * - Batches rapid changes (within 300ms)
- * - Respects max history limit
- * - Provides canUndo/canRedo flags
- * - Deduplicates identical consecutive states
- * 
- * Usage:
- * - Call pushToHistory() after making changes
- * - Use undo()/redo() to restore states
- */
 export function useUndoRedo(
   nodes: Node[],
   edges: Edge[],
@@ -57,14 +43,21 @@ export function useUndoRedo(
   const pendingRef = useRef<Node[] | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastPushedRef = useRef<string>("");
+  const isUndoRedoRef = useRef<boolean>(false);
 
   const getStateHash = (nodes: Node[], edges: Edge[]): string => {
     const nodesHash = JSON.stringify(nodes.map(n => ({ id: n.id, position: n.position })));
-    const edgesHash = JSON.stringify(edges.map(e => ({ id: e.id, source: e.target })));
+    // Fixed: was e.target twice, should be e.source and e.target
+    const edgesHash = JSON.stringify(edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
     return `${nodesHash}:${edgesHash}`;
   };
 
   const pushToHistory = useCallback(() => {
+    // Skip if we're in the middle of an undo/redo operation
+    if (isUndoRedoRef.current) {
+      return;
+    }
+
     const currentState: HistoryState = { nodes, edges };
     const stateHash = getStateHash(nodes, edges);
     
@@ -101,7 +94,7 @@ export function useUndoRedo(
       
       setFuture([]);
       
-      lastPushedRef.current = stateHash;
+      lastPushedRef.current = getStateHash(currentState.nodes, currentState.edges);
       pendingRef.current = null;
       timeoutRef.current = null;
     }, 300);
@@ -118,6 +111,9 @@ export function useUndoRedo(
     
     const previous = past[past.length - 1];
     
+    // Set flag to prevent pushToHistory from firing
+    isUndoRedoRef.current = true;
+    
     setFuture((prevFuture) => [
       { nodes, edges },
       ...prevFuture,
@@ -128,7 +124,13 @@ export function useUndoRedo(
     setNodes(previous.nodes);
     setEdges(previous.edges);
     
+    // Update the last pushed hash to the restored state
     lastPushedRef.current = getStateHash(previous.nodes, previous.edges);
+    
+    // Reset flag after state update
+    setTimeout(() => {
+      isUndoRedoRef.current = false;
+    }, 50);
     
     return previous;
   }, [past, nodes, edges, setNodes, setEdges]);
@@ -137,6 +139,9 @@ export function useUndoRedo(
     if (future.length === 0) return null;
     
     const next = future[0];
+    
+    // Set flag to prevent pushToHistory from firing
+    isUndoRedoRef.current = true;
     
     setPast((prevPast) => [
       ...prevPast,
@@ -148,7 +153,13 @@ export function useUndoRedo(
     setNodes(next.nodes);
     setEdges(next.edges);
     
+    // Update the last pushed hash to the restored state
     lastPushedRef.current = getStateHash(next.nodes, next.edges);
+    
+    // Reset flag after state update
+    setTimeout(() => {
+      isUndoRedoRef.current = false;
+    }, 50);
     
     return next;
   }, [future, nodes, edges, setNodes, setEdges]);
