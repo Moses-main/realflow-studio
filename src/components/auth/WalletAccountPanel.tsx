@@ -23,10 +23,10 @@ export function WalletAccountPanel() {
     getBalance, 
     copyAddress,
     connectWallet,
-    switchAccount
+    switchAccount,
+    login
   } = useAuth();
   const { openLoginModal } = useLoginModal();
-  const { login } = usePrivy();
   const [isOpen, setIsOpen] = useState(false);
   const [balances, setBalances] = useState<Record<string, string>>({});
   const [loadingBalances, setLoadingBalances] = useState<Record<string, boolean>>({});
@@ -36,22 +36,11 @@ export function WalletAccountPanel() {
   const handleSwitchAccount = async () => {
     setIsOpen(false);
     try {
-      // This will open Privy's wallet selection modal
-      // User can then choose a different wallet or connect a new one
       await connectWallet();
     } catch (error) {
       console.error("Switch account failed:", error);
     }
   };
-
-  // Select a specific account (for external wallets with multiple accounts)
-  const handleSelectAccount = useCallback((address: string) => {
-    // For embedded wallets, we can't switch - user needs to use Switch Account button
-    // For external wallets like MetaMask, they should switch in their wallet app
-    // Then click Switch Account to reconnect with the new account
-    console.log("Selected account:", address);
-    setIsOpen(false);
-  }, []);
 
   // Fetch balances for all accounts
   const fetchBalances = async () => {
@@ -60,13 +49,11 @@ export function WalletAccountPanel() {
     const newBalances: Record<string, string> = {};
     const newLoading: Record<string, boolean> = {};
 
-    // Set loading state
     allAccounts.forEach(acc => {
       newLoading[acc.address] = true;
     });
     setLoadingBalances(newLoading);
 
-    // Fetch balances
     for (const account of allAccounts) {
       const balance = await getBalance(account.address);
       newBalances[account.address] = balance;
@@ -110,7 +97,7 @@ export function WalletAccountPanel() {
   if (!user.isAuthenticated) {
     return (
       <button
-        onClick={openLoginModal}
+        onClick={() => login()}
         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white transition-colors"
       >
         <Wallet className="w-4 h-4" />

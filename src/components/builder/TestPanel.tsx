@@ -21,7 +21,7 @@ const NETWORKS = [
 ];
 
 export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
-  const { user, ready } = useAuth();
+  const { user, ready, loginWithWallet } = useAuth();
   const { openLoginModal } = useLoginModal();
   
   const address = user.address;
@@ -219,7 +219,17 @@ export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
    };
 
   const runSimulation = async () => {
-    if (!isConnected || steps.length === 0) return;
+    if (steps.length === 0) return;
+
+    // Prompt for login if not connected, but allow guest simulation to proceed
+    if (!isConnected) {
+      addLog("↓ Connecting wallet for on-chain simulation...");
+      try {
+        await loginWithWallet();
+      } catch (err) {
+        addLog("⚠ Continuing in Guest Mode (Authentication skipped)");
+      }
+    }
 
     setIsRunning(true);
     setLogs([]);
@@ -227,8 +237,8 @@ export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
     setTestBalance("100.00"); // Start with 100 test tokens
 
     addLog(`=== RealFlow Studio Test Simulation ===`);
-    addLog(`Network: ${selectedNetwork.name} (Testnet)`);
-    addLog(`Wallet: ${address}`);
+    addLog(`Network: ${selectedNetwork.name} (Simulated)`);
+    addLog(`Wallet: ${isConnected ? address : "Guest Mode"}`);
     addLog(`Test Balance: 100.00 ${selectedNetwork.symbol}`);
     addLog(`Components: ${nodes.length} | Connections: ${edges.length}`);
      addLog(``);
@@ -345,28 +355,26 @@ export function TestPanel({ nodes, edges, onClose }: TestPanelProps) {
       <div className="p-4 border-b border-[var(--border)]">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-[var(--text-muted)]">Wallet</span>
-          <span className={`badge ${isConnected ? "badge-success" : "badge-warning"}`}>
-            {isConnected ? "Connected" : "Disconnected"}
+          <span className={`badge ${isConnected ? "badge-success" : "badge-secondary"}`}>
+            {isConnected ? "Connected" : "Guest Mode"}
           </span>
         </div>
-        {isConnected ? (
-          <div>
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-[var(--primary)]" />
-              <span className="text-sm font-mono">{shortenAddress(address)}</span>
-            </div>
-            <div className="text-xs text-[var(--text-muted)] mt-1">
-              Test Balance: <span className="text-[var(--primary)] font-medium">{testBalance} {selectedNetwork.symbol}</span>
-            </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <Wallet className={`w-4 h-4 ${isConnected ? "text-[var(--primary)]" : "text-[var(--text-muted)]"}`} />
+            <span className="text-sm font-mono truncate">
+              {isConnected ? shortenAddress(address) : "0x00...Guest"}
+            </span>
           </div>
-        ) : (
-          <button
-            onClick={openLoginModal}
-            className="w-full btn-primary text-sm"
-          >
-            Connect Wallet to Test
-          </button>
-        )}
+          <div className="text-xs text-[var(--text-muted)] mt-1">
+            Test Balance: <span className="text-[var(--primary)] font-medium">{testBalance} {selectedNetwork.symbol}</span>
+          </div>
+          {!isConnected && (
+            <div className="mt-3 p-2 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-500/80 leading-tight">
+              Sign in before deploying to use your real wallet and maintain persistent state.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Flow Visualization */}

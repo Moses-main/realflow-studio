@@ -1,4 +1,11 @@
-import { http, createPublicClient, formatEther } from 'viem';
+import { 
+  http, 
+  createPublicClient, 
+  createWalletClient, 
+  formatEther, 
+  parseEther 
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { polygon, sepolia, mainnet } from 'viem/chains';
 
 const polygonAmoy = {
@@ -141,4 +148,102 @@ export async function estimateDeploymentGas(contractType) {
     currency: 'MATIC',
     note: 'Estimate only - actual gas may vary'
   };
+}
+
+/**
+ * Deploys a contract using the configured private key
+ * @param {string} abi - Contract ABI
+ * @param {string} bytecode - Contract bytecode
+ * @param {Array} args - Constructor arguments
+ * @param {string} network - Network key (default: polygon-amoy)
+ */
+export async function deployContract(abi, bytecode, args = [], network = 'polygon-amoy') {
+  const chain = getChain(network);
+  const rpcUrl = getRPCUrl(network);
+  const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
+
+  if (!privateKey) {
+    throw new Error('DEPLOYER_PRIVATE_KEY is not set');
+  }
+
+  // Ensure private key has 0x prefix
+  const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+  const account = privateKeyToAccount(formattedPrivateKey);
+
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(rpcUrl)
+  });
+
+  const walletClient = createWalletClient({
+    account,
+    chain,
+    transport: http(rpcUrl)
+  });
+
+  try {
+    console.log(`Starting deployment on ${chain.name}...`);
+    
+    const hash = await walletClient.deployContract({
+      abi,
+      bytecode,
+      args
+    });
+
+    console.log(`Transaction submitted: ${hash}`);
+
+    const receipt = await publicClient.waitForTransactionReceipt({ 
+      hash,
+      confirmations: 1 
+    });
+
+    console.log(`Deployment successful! Address: ${receipt.contractAddress}`);
+
+    return {
+      success: true,
+      address: receipt.contractAddress,
+      transactionHash: hash,
+      blockNumber: receipt.blockNumber.toString(),
+      explorerUrl: `${chain.blockExplorers.default.url}/tx/${hash}`,
+      status: receipt.status
+    };
+  } catch (error) {
+    console.error('Deployment execution error:', error);
+    const parsed = parseBlockchainError(error);
+    throw new Error(parsed);
+  }
+}
+
+/**
+ * Parses complex viem/blockchain errors into human-readable strings
+ */
+function parseBlockchainError(error) {
+  if (!error) return 'Unknown blockchain error';
+
+  // Handle viem BaseError/TransactionExecutionError
+  if (error.shortMessage) {
+    return error.shortMessage;
+  }
+
+  const msg = error.message || '';
+  
+  if (msg.includes('insufficient funds')) {
+    const deployer = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+    return `Insufficient funds: The backend deployer (${deployer}) needs MATIC for gas. Please fund it or update DEPLOYER_PRIVATE_KEY in .env`;
+  }
+
+  if (msg.includes('gas required exceeds allowance') || msg.includes('intrinsic gas too low')) {
+    return 'Gas error: The transaction requires more gas than provided or allowed.';
+  }
+
+  if (msg.includes('nonce too low')) {
+    return 'Transaction sync error: The deployer nonce is out of sync. Please wait a moment and try again.';
+  }
+
+  if (msg.includes('user rejected')) {
+    return 'Transaction rejected by signer.';
+  }
+
+  // Fallback to the first line of the message if it's too long
+  return msg.split('\n')[0] || 'Blockchain deployment failed';
 }

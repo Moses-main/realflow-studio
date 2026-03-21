@@ -59,13 +59,10 @@ export function useAuth() {
     hasWallet: !!embeddedWallet,
   };
 
-  // Login with email (sends magic link)
+  // Login with email
   const loginWithEmail = useCallback(async (emailAddress?: string) => {
     try {
-      await login({
-        loginMechanism: "email",
-        ...(emailAddress && { email: emailAddress }),
-      });
+      await login();
     } catch (error) {
       console.error("Email login failed:", error);
       throw error;
@@ -75,7 +72,7 @@ export function useAuth() {
   // Login with Google
   const loginWithGoogle = useCallback(async () => {
     try {
-      await login({ loginMechanism: "google" });
+      await login();
     } catch (error) {
       console.error("Google login failed:", error);
       throw error;
@@ -85,12 +82,12 @@ export function useAuth() {
   // Login with wallet
   const loginWithWallet = useCallback(async () => {
     try {
-      await login({ loginMechanism: "wallet" });
+      await connectWallet();
     } catch (error) {
       console.error("Wallet login failed:", error);
       throw error;
     }
-  }, [login]);
+  }, [connectWallet]);
 
   // Logout
   const handleLogout = useCallback(async () => {
@@ -212,7 +209,7 @@ export function useAuth() {
     user,
     authenticated,
     ready,
-    login: loginWithEmail,
+    login,
     loginWithEmail,
     loginWithGoogle,
     loginWithWallet,
@@ -225,7 +222,7 @@ export function useAuth() {
     copyAddress,
     address,
     email,
-    hasWallet: !!embeddedWallet,
+    hasWallet: wallets.length > 0,
     allAccounts,
     wallets: wallets || [],
   };

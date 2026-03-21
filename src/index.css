@@ -302,8 +302,7 @@
 
 /* React Flow overrides for Linear style */
 .react-flow,
-.react-flow__background,
-.react-flow__container {
+.react-flow__background {
   background-color: #0a0b0d !important;
 }
 
@@ -311,9 +310,7 @@
   background: #0a0b0d !important;
 }
 
-.react-flow__pane {
-  background-color: #0a0b0d !important;
-}
+
 
 .react-flow__minimap {
   background: #111315 !important;
@@ -415,18 +412,6 @@ button {
 /* ===================== */
 /* React Flow - Dark Theme */
 /* ===================== */
-
-.react-flow__renderer {
-  background-color: #0e1012 !important;
-}
-
-.react-flow__background {
-  background-color: #0e1012 !important;
-}
-
-.react-flow__controls {
-  display: none !important;
-}
 
 .react-flow__minimap {
   background-color: #141517 !important;

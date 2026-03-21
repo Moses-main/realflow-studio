@@ -136,7 +136,7 @@ const App = () => {
             <KeyboardShortcutsHandler />
             <Routes>
               <Route path="/" element={<ErrorBoundary><Landing /></ErrorBoundary>} />
-              <Route path="/canvas" element={<ProtectedRoute><ErrorBoundary><Builder /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/canvas" element={<ErrorBoundary><Builder /></ErrorBoundary>} />
               <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
               <Route path="/marketplaces" element={<ErrorBoundary><MarketplaceList /></ErrorBoundary>} />
               <Route path="/marketplaces/:id" element={<ErrorBoundary><MarketplaceDetail /></ErrorBoundary>} />

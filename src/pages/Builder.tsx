@@ -14,6 +14,7 @@ import {
   MiniMap,
   applyNodeChanges,
   applyEdgeChanges,
+  ConnectionLineType,
   type NodeChange,
   type EdgeChange,
   type OnConnect,
@@ -41,7 +42,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import ComponentPalette, { type PaletteItem } from "@/components/builder/ComponentPalette";
 import AISidebar from "@/components/builder/AISidebar";
 import CustomNode from "@/components/builder/CustomNode";
@@ -50,6 +51,24 @@ import { AnimatedDottedEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
+import { useAuth } from "@/hooks/useAuth";
+import { useWallets } from "@privy-io/react-auth";
+import { createWalletClient, custom, http, createPublicClient } from "viem";
+
+const polygonAmoy = {
+  id: 80002,
+  name: 'Polygon Amoy',
+  nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://rpc-amoy.polygon.technology/'] },
+    public: { http: ['https://rpc-amoy.polygon.technology/'] },
+  },
+  blockExplorers: {
+    default: { name: 'PolygonScan', url: 'https://amoy.polygonscan.com' },
+  },
+  testnet: true,
+};
+
 import { ConnectButton } from "@/components/auth/ConnectButton";
 
 // Node types - maps component types to React Flow node components
@@ -67,9 +86,10 @@ const edgeTypes = {
  */
 function BuilderCanvas() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlow = useReactFlow();
+  const { user, authenticated, hasWallet, loginWithWallet } = useAuth();
+  const { wallets } = useWallets();
   
   // =====================
   // STATE MANAGEMENT
@@ -192,8 +212,7 @@ function BuilderCanvas() {
       
       setEdges((eds) => [...eds, newEdge]);
       
-      toast({
-        title: "Connected",
+      toast.success("Connected", {
         description: "Components connected successfully",
       });
     },
@@ -211,19 +230,21 @@ function BuilderCanvas() {
 
   // Add component to canvas at center or given position
   const addComponent = useCallback((item: PaletteItem, position?: { x: number; y: number }) => {
-    const viewport = reactFlow.getViewport();
     const bounds = reactFlowWrapper.current?.getBoundingClientRect();
     
-    // Calculate center position or use provided position
     let x = 200 + Math.random() * 100;
     let y = 150 + Math.random() * 100;
     
-    if (bounds && !position) {
-      x = (bounds.width / 2 - viewport.x) / viewport.zoom;
-      y = (bounds.height / 2 - viewport.y) / viewport.zoom;
-    } else if (position) {
+    if (position) {
       x = position.x;
       y = position.y;
+    } else if (bounds) {
+      const center = reactFlow.screenToFlowPosition({
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top + bounds.height / 2,
+      });
+      x = center.x;
+      y = center.y;
     }
 
     const newNode: Node = {
@@ -239,8 +260,7 @@ function BuilderCanvas() {
 
     setNodes((nds) => [...nds, newNode]);
     
-    toast({
-      title: "Component added",
+    toast.success("Component added", {
       description: `${item.label} added to canvas`,
     });
   }, [reactFlow, setNodes, toast]);
@@ -258,16 +278,15 @@ function BuilderCanvas() {
           
           if (!bounds) return;
           
-          // Calculate position relative to viewport
-          const viewport = reactFlow.getViewport();
+          const position = reactFlow.screenToFlowPosition({
+            x: e.clientX,
+            y: e.clientY,
+          });
           
           const newNode: Node = {
             id: `${paletteItem.type}-${Date.now()}`,
             type: "custom",
-            position: {
-              x: (e.clientX - bounds.left - viewport.x) / viewport.zoom,
-              y: (e.clientY - bounds.top - viewport.y) / viewport.zoom,
-            },
+            position,
             data: {
               label: paletteItem.label,
               componentType: paletteItem.type,
@@ -277,8 +296,7 @@ function BuilderCanvas() {
           
           setNodes((nds) => [...nds, newNode]);
           
-          toast({
-            title: "Component added",
+          toast.success("Component added", {
             description: `${paletteItem.label} added to canvas`,
           });
         } catch (err) {
@@ -294,25 +312,39 @@ function BuilderCanvas() {
   // =====================
 
   const handleSave = useCallback(() => {
+    // Show prompt if not connected
+    if (!authenticated || !hasWallet) {
+      toast("Wallet Required", {
+        description: "Your work is saved locally. Connect your wallet to back up your progress to the cloud.",
+        action: {
+          label: "Connect Wallet",
+          onClick: () => loginWithWallet()
+        },
+      });
+    }
+
+    // Still save to local storage as a guest
     const flowData = {
       nodes,
       edges,
       viewport: reactFlow.getViewport(),
     };
+    
     localStorage.setItem("realflow-canvas", JSON.stringify(flowData));
-    toast({
-      title: "Canvas saved",
-      description: `${nodes.length} components saved`,
-    });
-  }, [nodes, edges, reactFlow, toast]);
+    
+    if (authenticated && hasWallet) {
+      toast.success("Canvas saved", {
+        description: `${nodes.length} components saved to your account`,
+      });
+    }
+  }, [nodes, edges, reactFlow, toast, authenticated, hasWallet, loginWithWallet]);
 
   const handleClear = useCallback(() => {
     if (nodes.length > 0) {
       setNodes([]);
       setEdges([]);
       clearHistory();
-      toast({
-        title: "Canvas cleared",
+      toast.success("Canvas cleared", {
         description: "All components removed",
       });
     }
@@ -321,27 +353,24 @@ function BuilderCanvas() {
   const handleUndo = useCallback(() => {
     const state = undo();
     if (state) {
-      toast({ title: "Undo", description: "Previous state restored" });
+      toast("Undo", { description: "Previous state restored" });
     }
   }, [undo, toast]);
 
   const handleRedo = useCallback(() => {
     const state = redo();
     if (state) {
-      toast({ title: "Redo", description: "Next state restored" });
+      toast("Redo", { description: "Next state restored" });
     }
   }, [redo, toast]);
 
   const handleDelete = useCallback(() => {
     if (selectedNodeIds.length > 0) {
-      // Delete selected nodes
       setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
-      // Delete edges connected to selected nodes
       setEdges((eds) => eds.filter(
         (e) => !selectedNodeIds.includes(e.source) && !selectedNodeIds.includes(e.target)
       ));
-      toast({
-        title: "Deleted",
+      toast.success("Deleted", {
         description: `${selectedNodeIds.length} component(s) removed`,
       });
       setSelectedNodeIds([]);
@@ -354,8 +383,7 @@ function BuilderCanvas() {
       (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
     );
     clipboardRef.current = { nodes: selectedNodes, edges: selectedEdges };
-    toast({
-      title: "Copied",
+    toast.success("Copied", {
       description: `${selectedNodes.length} component(s) copied`,
     });
   }, [nodes, edges, selectedNodeIds, toast]);
@@ -377,8 +405,7 @@ function BuilderCanvas() {
     }));
     
     setNodes((nds) => [...nds, ...newNodes]);
-    toast({
-      title: "Pasted",
+    toast.success("Pasted", {
       description: `${newNodes.length} component(s) pasted`,
     });
   }, [reactFlow, setNodes, toast]);
@@ -392,11 +419,23 @@ function BuilderCanvas() {
   const [deploymentStatus, setDeploymentStatus] = useState<string | null>(null);
 
   const handleDeploy = useCallback(async () => {
+    console.log("handleDeploy triggered", { authenticated, hasWallet, nodesCount: nodes.length });
+    
+    if (!authenticated || !hasWallet) {
+      console.log("Showing wallet connection toast");
+      toast("Wallet Required", {
+        description: "You must connect a blockchain wallet before deploying your marketplace.",
+        action: {
+          label: "Connect Wallet",
+          onClick: () => loginWithWallet()
+        },
+      });
+      return;
+    }
+
     if (nodes.length === 0) {
-      toast({
-        title: "Cannot deploy",
+      toast.error("Cannot deploy", {
         description: "Add components to the canvas first",
-        variant: "destructive",
       });
       return;
     }
@@ -407,22 +446,21 @@ function BuilderCanvas() {
     );
 
     if (!hasRequiredComponents) {
-      toast({
-        title: "Missing components",
+      toast.error("Missing components", {
         description: "Add mint, listing, or buy components to deploy",
-        variant: "destructive",
       });
       return;
     }
 
     setIsDeploying(true);
-    setDeploymentStatus("Generating contract code...");
+    setDeploymentStatus("Initializing backend deployment...");
 
     try {
       const flowData = {
         nodes,
         edges,
         components: nodeTypes,
+        owner: wallets[0]?.address
       };
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
@@ -432,31 +470,33 @@ function BuilderCanvas() {
       });
 
       if (!response.ok) {
-        throw new Error("Deployment failed");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || `Deployment failed (Status ${response.status})`);
       }
 
       const result = await response.json();
 
-      setDeploymentStatus("Deploying to blockchain...");
+      setDeploymentStatus("Finalizing...");
 
-      toast({
-        title: "Deployment successful!",
-        description: `Contract deployed at ${result.address?.slice(0, 10)}...`,
+      toast.success("Marketplace live on Polygon Amoy!", {
+        description: `Tx Hash: ${result.transactionHash}\nFactory: ${result.address}`,
+        action: {
+          label: "View Transaction",
+          onClick: () => window.open(result.explorerUrl || `https://amoy.polygonscan.com/tx/${result.transactionHash}`, "_blank"),
+        },
       });
 
       localStorage.setItem("deployed-contract", JSON.stringify(result));
     } catch (error) {
       console.error("Deployment error:", error);
-      toast({
-        title: "Deployment failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
+      toast.error("Deployment failed", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
       });
     } finally {
       setIsDeploying(false);
       setDeploymentStatus(null);
     }
-  }, [nodes, edges, toast]);
+  }, [nodes, edges, toast, authenticated, hasWallet, loginWithWallet, wallets]);
 
   // =====================
   // ZOOM CONTROLS
@@ -679,8 +719,7 @@ function BuilderCanvas() {
               style: { stroke: "#6366f1", strokeWidth: 2, strokeDasharray: "8 4" },
             }}
             connectionLineStyle={{ stroke: "#6366f1", strokeWidth: 2 }}
-            connectionLineType="bezier"
-            style={{ backgroundColor: "#0e1012" }}
+            connectionLineType={ConnectionLineType.Bezier}
             minZoom={0.1}
             maxZoom={2}
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -703,7 +742,6 @@ function BuilderCanvas() {
               color="#2a2c2e"
               gap={20}
               size={1}
-              style={{ backgroundColor: "#0e1012" }}
             />
 
             {/* Mini Map */}
@@ -735,7 +773,7 @@ function BuilderCanvas() {
 
           {/* Empty State */}
           {nodes.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
               <div className="text-center p-10 border-2 border-dashed border-gray-700/50 rounded-2xl bg-gray-900/30">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-800 flex items-center justify-center">
                   <Blocks className="w-8 h-8 text-gray-600" />
@@ -747,7 +785,7 @@ function BuilderCanvas() {
           )}
 
           {/* Status Bar */}
-          <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-xs text-gray-500 bg-[#0e1012]/90 px-3 py-1.5 rounded-lg border border-gray-800">
+          <div className="absolute bottom-4 left-4 z-[5] flex items-center gap-2 text-xs text-gray-500 bg-[#0e1012]/90 px-3 py-1.5 rounded-lg border border-gray-800">
             <span>{nodes.length} node{nodes.length !== 1 ? "s" : ""}</span>
             <span className="text-gray-700">|</span>
             <span>{edges.length} edge{edges.length !== 1 ? "s" : ""}</span>
@@ -758,7 +796,7 @@ function BuilderCanvas() {
           </div>
 
           {/* Zoom Level */}
-          <div className="absolute bottom-4 right-20 z-10 text-xs text-gray-500 bg-[#0e1012]/90 px-2 py-1 rounded border border-gray-800">
+          <div className="absolute bottom-4 right-20 z-[5] text-xs text-gray-500 bg-[#0e1012]/90 px-2 py-1 rounded border border-gray-800">
             {Math.round((reactFlow.getViewport().zoom || 1) * 100)}%
           </div>
         </div>
