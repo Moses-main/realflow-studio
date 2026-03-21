@@ -14,6 +14,7 @@ export type { PaletteItem };
 
 interface Props {
   onDragStart: (item: PaletteItem) => void;
+  onAdd?: (item: PaletteItem) => void;
 }
 
 // Visual preview component
@@ -165,7 +166,7 @@ const ComponentPreview = ({ type }: { type: string }) => {
   return previews[previewType] || previews.info;
 };
 
-const ComponentPalette = ({ onDragStart }: Props) => {
+const ComponentPalette = ({ onDragStart, onAdd }: Props) => {
   const [previewItem, setPreviewItem] = useState<PaletteItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<PaletteItem | null>(null);
   const categories = [...new Set(paletteItems.map((p) => p.category))];
@@ -195,10 +196,10 @@ const ComponentPalette = ({ onDragStart }: Props) => {
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-primary/10 hover:border-primary/30 transition-all border border-transparent group"
                   >
                   <Icon className="w-4 h-4 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
                     <div className="text-sm">{item.label}</div>
                     {item.description && (
-                      <div className="text-xs text-muted-foreground truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="text-xs text-muted-foreground truncate">
                         {item.description}
                       </div>
                     )}
@@ -295,6 +296,7 @@ const ComponentPalette = ({ onDragStart }: Props) => {
                     Close
                   </Button>
                   <Button className="flex-1" onClick={() => {
+                    onAdd?.(previewItem);
                     onDragStart(previewItem);
                     setPreviewItem(null);
                   }}>

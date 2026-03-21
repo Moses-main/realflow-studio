@@ -199,6 +199,42 @@ function BuilderCanvas() {
     e.dataTransfer.dropEffect = "move";
   }, []);
 
+  // Add component to canvas at center or given position
+  const addComponent = useCallback((item: PaletteItem, position?: { x: number; y: number }) => {
+    const viewport = reactFlow.getViewport();
+    const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+    
+    // Calculate center position or use provided position
+    let x = 200 + Math.random() * 100;
+    let y = 150 + Math.random() * 100;
+    
+    if (bounds && !position) {
+      x = (bounds.width / 2 - viewport.x) / viewport.zoom;
+      y = (bounds.height / 2 - viewport.y) / viewport.zoom;
+    } else if (position) {
+      x = position.x;
+      y = position.y;
+    }
+
+    const newNode: Node = {
+      id: `${item.type}-${Date.now()}`,
+      type: "custom",
+      position: { x, y },
+      data: {
+        label: item.label,
+        componentType: item.type,
+        category: item.category,
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+    
+    toast({
+      title: "Component added",
+      description: `${item.label} added to canvas`,
+    });
+  }, [reactFlow, setNodes, toast]);
+
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -474,7 +510,7 @@ function BuilderCanvas() {
           <div className="text-xs text-gray-500 mb-3 px-2">
             Drag components to canvas
           </div>
-          <ComponentPalette onDragStart={() => {}} />
+          <ComponentPalette onDragStart={() => {}} onAdd={addComponent} />
         </div>
       </div>
 
