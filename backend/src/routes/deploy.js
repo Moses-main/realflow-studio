@@ -22,7 +22,7 @@ const deploySchema = z.object({
   components: z.array(z.string()).optional(),
 });
 
-router.post('/deploy', async (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
     const { nodes, edges, components } = deploySchema.parse(req.body);
 
