@@ -28,11 +28,7 @@ export default function Landing() {
             <span className="font-semibold text-[var(--text-primary)]">RealFlow Studio</span>
           </div>
           
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Features</a>
-            <a href="#templates" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Templates</a>
-            <a href="#docs" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Docs</a>
-          </nav>
+
 
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
