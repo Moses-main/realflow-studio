@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Wallet, Copy, Check, ExternalLink, RefreshCw, 
-  ChevronDown, ChevronUp, LogOut, User
+  ChevronDown, ChevronUp, LogOut, User, RefreshCcw
 } from "lucide-react";
 import { useAuth, shortenAddress } from "@/hooks/useAuth";
 import { useLoginModal } from "@/providers/LoginModalProvider";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface AccountBalance {
   address: string;
@@ -24,10 +25,21 @@ export function WalletAccountPanel() {
     connectWallet 
   } = useAuth();
   const { openLoginModal } = useLoginModal();
+  const { login } = usePrivy();
   const [isOpen, setIsOpen] = useState(false);
   const [balances, setBalances] = useState<Record<string, string>>({});
   const [loadingBalances, setLoadingBalances] = useState<Record<string, boolean>>({});
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  // Switch account - reopens Privy modal to select different wallet/account
+  const handleSwitchAccount = async () => {
+    setIsOpen(false);
+    try {
+      await login();
+    } catch (error) {
+      console.error("Switch account failed:", error);
+    }
+  };
 
   // Fetch balances for all accounts
   const fetchBalances = async () => {
@@ -247,11 +259,11 @@ export function WalletAccountPanel() {
               <div className="p-3 border-t border-[var(--border)] bg-[var(--surface-elevated)]">
                 <div className="flex gap-2">
                   <button
-                    onClick={connectWallet}
+                    onClick={handleSwitchAccount}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm transition-colors"
                   >
-                    <Wallet className="w-4 h-4" />
-                    Add Wallet
+                    <RefreshCcw className="w-4 h-4" />
+                    Switch Account
                   </button>
                   <button
                     onClick={() => {
