@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   Blocks, Rocket, ArrowRight, Plus, Settings, Bell,
   TrendingUp, Wallet, ExternalLink, Clock, BarChart3, Home,
-  Loader2, RefreshCw
+  Loader2, RefreshCw, Package, Globe
 } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";

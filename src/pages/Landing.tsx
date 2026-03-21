@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LanguageSwitcher } from "@/components/theme/LanguageSwitcher";
 import { useLanguage } from "@/components/theme/LanguageSwitcher";
 import { useAuth } from "@/hooks/useAuth";
+import { AnimatedHeroFlow } from "@/components/landing/AnimatedHeroFlow";
 
 const features = [
   {
@@ -182,23 +183,13 @@ export default function Landing() {
             </motion.div>
           </motion.div>
 
-          {/* Preview Image */}
+          {/* Preview Animation Container */}
           <motion.div
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-16"
           >
-            <div className="surface p-2 rounded-xl shadow-2xl shadow-[var(--primary)]/5">
-              <div className="bg-[var(--surface-elevated)] rounded-lg aspect-video flex items-center justify-center relative overflow-hidden">
-                {/* Grid pattern background */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--primary-rgb),0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--primary-rgb),0.03)_1px,transparent_1px)] bg-[size:20px_20px]" />
-                <div className="text-center p-8 relative z-10">
-                  <Blocks className="w-16 h-16 text-[var(--primary)] mx-auto mb-4 opacity-50" />
-                  <p className="text-[var(--text-muted)]">Builder Preview</p>
-                </div>
-              </div>
-            </div>
+            <AnimatedHeroFlow />
           </motion.div>
         </div>
       </section>
