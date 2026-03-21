@@ -50,39 +50,7 @@ import { BezierEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
-import { useAuth, shortenAddress } from "@/hooks/useAuth";
-import { LoginModal } from "@/components/auth/LoginModal";
-
-// Wallet Button Component using Privy
-function WalletButton() {
-  const { user, logout, ready } = useAuth();
-  const [showModal, setShowModal] = useState(false);
-
-  if (!ready) {
-    return (
-      <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)]" disabled>
-        <Wallet className="w-4 h-4 animate-pulse" />
-        <span className="text-xs">Loading...</span>
-      </button>
-    );
-  }
-
-  return (
-    <>
-      <button
-        onClick={() => user.isAuthenticated ? logout() : setShowModal(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] transition-colors"
-      >
-        <Wallet className="w-4 h-4" />
-        <span className="text-xs font-mono">
-          {user.isAuthenticated ? shortenAddress(user.address) : "Connect"}
-        </span>
-        {user.isAuthenticated && <ChevronDown className="w-3 h-3" />}
-      </button>
-      <LoginModal isOpen={showModal} onClose={() => setShowModal(false)} />
-    </>
-  );
-}
+import { ConnectButton } from "@/components/auth/ConnectButton";
 
 // Node types - maps component types to React Flow node components
 const nodeTypes = { custom: CustomNode };
@@ -625,7 +593,7 @@ function BuilderCanvas() {
             </button>
 
             {/* Wallet */}
-            <WalletButton />
+            <ConnectButton variant="outline" size="sm" />
 
             {/* Toggle Right Panel */}
             <button
@@ -754,7 +722,7 @@ function BuilderCanvas() {
             <Button variant="outline" size="sm" onClick={handleClear}>
               <Trash2 className="w-4 h-4 mr-1" /> Clear
             </Button>
-            <WalletButton />
+            <ConnectButton variant="outline" size="sm" />
           </div>
           <Button
             variant="default"

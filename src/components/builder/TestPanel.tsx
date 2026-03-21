@@ -5,7 +5,7 @@ import {
   Wallet, Eye, ExternalLink
 } from "lucide-react";
 import { useAuth, shortenAddress } from "@/hooks/useAuth";
-import { LoginModal } from "@/components/auth/LoginModal";
+import { useLoginModal } from "@/providers/LoginModalProvider";
 import type { Node } from "@xyflow/react";
 
 interface SimulationStep {
@@ -23,13 +23,13 @@ interface TestPanelProps {
 
 export function TestPanel({ nodes, onClose }: TestPanelProps) {
   // Real wallet data from Privy
-  const { user, login, ready } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
+  const { user, ready } = useAuth();
+  const { openLoginModal } = useLoginModal();
   
   const address = user.address;
   const isConnected = user.isAuthenticated;
-  const balance = "0.0000"; // Will be fetched from blockchain
-  const blockNumber = null; // Will be fetched from blockchain
+  const balance = "0.0000";
+  const blockNumber = null;
 
   const [isRunning, setIsRunning] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -274,9 +274,8 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
             Est. Gas: {gasEstimate}
           </div>
         )}
-        <>
           <button
-            onClick={!isConnected ? () => setShowLogin(true) : runSimulation}
+            onClick={!isConnected ? openLoginModal : runSimulation}
             disabled={isRunning || (isConnected && nodes.length === 0) || !ready}
             className={`w-full btn-primary flex items-center justify-center gap-2 ${
               allPassed ? "bg-[var(--success)] hover:bg-[var(--success)]/90" : ""
@@ -309,8 +308,6 @@ export function TestPanel({ nodes, onClose }: TestPanelProps) {
               </>
             )}
           </button>
-          <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
-        </>
         
         <button
           onClick={() => {

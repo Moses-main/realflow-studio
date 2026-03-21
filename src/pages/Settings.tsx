@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
@@ -54,7 +55,7 @@ const mockTransactions: Transaction[] = [
 const MOCK_MODE_KEY = "realflow-mock-mode";
 
 const Settings = () => {
-  const { user, connectWallet, disconnectWallet } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState({
     email: true,
@@ -273,11 +274,11 @@ const Settings = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Connected Wallet</CardTitle>
-                  <CardDescription>Manage your connected wallet</CardDescription>
+                  <CardTitle>Account</CardTitle>
+                  <CardDescription>Manage your account and wallet</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {user.isWalletConnected ? (
+                  {user.isAuthenticated ? (
                     <>
                       <div className="flex items-center justify-between p-4 rounded-lg border">
                         <div className="flex items-center gap-3">
@@ -285,9 +286,9 @@ const Settings = () => {
                             <Wallet className="w-5 h-5 text-primary-foreground" />
                           </div>
                           <div>
-                            <p className="font-medium capitalize">{user.walletType || "Wallet"}</p>
+                            <p className="font-medium">{user.email || "Wallet Connected"}</p>
                             <p className="text-sm text-muted-foreground font-mono">
-                              {user.address}
+                              {user.address ? `${user.address.slice(0, 10)}...${user.address.slice(-6)}` : ""}
                             </p>
                           </div>
                         </div>
@@ -299,7 +300,7 @@ const Settings = () => {
                         <Button 
                           variant="outline" 
                           className="flex-1"
-                          onClick={() => window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
+                          onClick={() => user.address && window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
                         >
                           <ExternalLink className="w-4 h-4 mr-2" />
                           View on Explorer
@@ -307,17 +308,17 @@ const Settings = () => {
                         <Button 
                           variant="destructive" 
                           className="flex-1"
-                          onClick={disconnectWallet}
+                          onClick={logout}
                         >
-                          Disconnect
+                          Sign Out
                         </Button>
                       </div>
                     </>
                   ) : (
                     <div className="text-center py-8">
                       <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground mb-4">No wallet connected</p>
-                      <Button onClick={connectWallet}>Connect Wallet</Button>
+                      <p className="text-muted-foreground mb-4">Not signed in</p>
+                      <ConnectButton variant="default" size="md" />
                     </div>
                   )}
                 </CardContent>

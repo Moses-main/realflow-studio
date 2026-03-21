@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
 
 const stats = [
   { label: "Total Volume", value: "$1.03M", change: "+12.5%", up: true, icon: DollarSign },
@@ -33,7 +34,7 @@ const assetBreakdown = [
 ];
 
 const Analytics = () => {
-  const { user, connectWallet } = useAuth();
+  const { user } = useAuth();
   const maxVolume = useMemo(
     () => Math.max(...volumeData.map(d => d.volume)),
     []
@@ -49,18 +50,13 @@ const Analytics = () => {
           <h1 className="text-lg font-semibold lg:hidden">Analytics</h1>
           <h1 className="hidden lg:block text-xl font-semibold">Analytics</h1>
           <div className="flex items-center gap-3">
-            {user.isWalletConnected ? (
+            {user.isAuthenticated ? (
               <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
                 <Activity className="w-4 h-4" />
                 Live
               </div>
             ) : (
-              <button
-                onClick={connectWallet}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Connect wallet to view live data
-              </button>
+              <ConnectButton variant="ghost" size="sm" />
             )}
           </div>
         </header>

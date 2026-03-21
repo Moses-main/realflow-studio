@@ -5,7 +5,8 @@ import {
   Home, Package, BarChart3, Globe, Settings,
   Menu, X, Blocks, Wallet, LogOut
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, shortenAddress } from "@/hooks/useAuth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
 
 interface SidebarProps {
   className?: string;
@@ -21,7 +22,7 @@ const navItems = [
 
 const Sidebar = ({ className = "" }: SidebarProps) => {
   const location = useLocation();
-  const { user, connectWallet, disconnectWallet } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const NavContent = () => (
@@ -57,38 +58,32 @@ const Sidebar = ({ className = "" }: SidebarProps) => {
 
       {/* Wallet Section */}
       <div className="px-3 py-4 border-t border-[var(--sidebar-border)]">
-        {user.isWalletConnected ? (
+        {user.isAuthenticated ? (
           <div className="surface p-3">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-xs font-bold text-white">
-                {user.address ? `${user.address.slice(2,4)}` : "RF"}
+                {user.email ? user.email.charAt(0).toUpperCase() : "RF"}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-[var(--text-primary)] truncate">
-                  {user.address ? `${user.address.slice(0,6)}...${user.address.slice(-4)}` : "Connected"}
+                  {user.email || shortenAddress(user.address)}
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                  <div className="status-dot-success" />
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
                   Polygon Amoy
                 </div>
               </div>
             </div>
             <button
-              onClick={disconnectWallet}
+              onClick={logout}
               className="w-full flex items-center justify-center gap-2 text-xs text-[var(--error)] hover:text-[var(--error)]/80 transition-colors py-1.5 rounded-lg hover:bg-[var(--error-muted)]"
             >
               <LogOut className="w-3 h-3" />
-              Disconnect
+              Sign Out
             </button>
           </div>
         ) : (
-          <button
-            onClick={connectWallet}
-            className="btn-primary w-full flex items-center justify-center gap-2 text-sm"
-          >
-            <Wallet className="w-4 h-4" />
-            Connect Wallet
-          </button>
+          <ConnectButton variant="default" size="md" />
         )}
       </div>
     </>

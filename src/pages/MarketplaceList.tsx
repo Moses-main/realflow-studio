@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
 
 const categories = [
   { id: "all", label: "All", icon: Package },
@@ -223,7 +224,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
 };
 
 const MarketplaceList = () => {
-  const { user, connectWallet } = useAuth();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<"all" | "live" | "draft">("all");
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -246,15 +247,7 @@ const MarketplaceList = () => {
         <header className="sticky top-0 z-30 glass-strong border-b border-border px-4 py-4 lg:px-8 lg:h-16 flex items-center justify-between lg:justify-end gap-4">
           <h1 className="text-lg font-semibold lg:hidden">My Marketplaces</h1>
           <div className="flex items-center gap-3 w-full lg:w-auto">
-            {user.isWalletConnected ? (
-              <Button variant="outline" size="sm" className="gap-2 flex-1 lg:flex-none">
-                12.4 MATIC
-              </Button>
-            ) : (
-              <Button size="sm" className="gap-2 flex-1 lg:flex-none" onClick={connectWallet}>
-                Connect Wallet
-              </Button>
-            )}
+            <ConnectButton variant="outline" size="sm" />
             <Button size="sm" className="gap-2" asChild>
               <Link to="/canvas">
                 <Plus className="w-4 h-4" />

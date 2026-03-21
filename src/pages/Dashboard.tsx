@@ -11,10 +11,11 @@ import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/components/theme/LanguageSwitcher";
 import { useStats, useMarketplaces, useTemplates } from "@/hooks/useData";
+import { ConnectButton } from "@/components/auth/ConnectButton";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, connectWallet } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   
   // Dynamic data from hooks
@@ -60,18 +61,7 @@ const Dashboard = () => {
               <button className="p-2 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] transition-colors">
                 <Bell className="w-4 h-4" />
               </button>
-              {user.isWalletConnected ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 surface rounded-lg">
-                  <div className="status-dot-success" />
-                  <span className="text-xs font-mono text-[var(--text-secondary)]">
-                    {user.address?.slice(0, 6)}...{user.address?.slice(-4)}
-                  </span>
-                </div>
-              ) : (
-                <button onClick={connectWallet} className="btn-primary text-sm">
-                  {t("common.connect")}
-                </button>
-              )}
+              <ConnectButton variant="outline" size="sm" />
             </div>
           </div>
         </header>
