@@ -8,15 +8,15 @@ import {
 } from "@xyflow/react";
 
 /**
- * Custom BezierEdge - Professional curved edge with modern styling
+ * Custom AnimatedDottedEdge - Dotted animated edge showing data flow
  * 
  * Features:
  * - Smooth bezier curve with configurable curvature
- * - Hover effects with animated flow
- * - Delete button on hover/selection
- * - Professional dark theme colors
+ * - Animated dotted line showing flow direction
+ * - Hover effects
+ * - Delete button on selection
  */
-export const BezierEdge = memo(({
+export const AnimatedDottedEdge = memo(({
   id,
   sourceX,
   sourceY,
@@ -49,11 +49,21 @@ export const BezierEdge = memo(({
   // Style based on state
   const strokeColor = selected ? "#818cf8" : (data?.color as string) || "#6366f1";
   const strokeWidth = selected ? 3 : 2;
-  const strokeOpacity = selected ? 1 : 0.8;
+  const flowSpeed = data?.speed || 1;
 
   return (
     <>
-      {/* Main edge path */}
+      {/* Background glow effect */}
+      <path
+        d={edgePath}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={strokeWidth + 8}
+        strokeOpacity={0.1}
+        filter="blur(4px)"
+      />
+
+      {/* Main dotted animated edge path */}
       <BaseEdge
         id={id}
         path={edgePath}
@@ -61,12 +71,32 @@ export const BezierEdge = memo(({
         style={{
           stroke: strokeColor,
           strokeWidth,
-          strokeOpacity,
-          transition: "stroke 0.2s, stroke-width 0.2s",
+          strokeDasharray: "8 4",
+          strokeLinecap: "round",
+          animation: `flowDash ${1 / flowSpeed}s linear infinite`,
         }}
       />
 
-      {/* Delete button (visible on hover/selection) */}
+      {/* Animated flow indicator (moving dot) */}
+      <circle r="3" fill={strokeColor} opacity={0.8}>
+        <animateMotion
+          dur={`${1 / flowSpeed}s`}
+          repeatCount="indefinite"
+          path={edgePath}
+        />
+      </circle>
+
+      {/* Secondary dot for smoother flow */}
+      <circle r="2" fill={strokeColor} opacity={0.5}>
+        <animateMotion
+          dur={`${1 / flowSpeed}s`}
+          repeatCount="indefinite"
+          path={edgePath}
+          begin="0.5s"
+        />
+      </circle>
+
+      {/* Delete button (visible on selection) */}
       <EdgeLabelRenderer>
         <div
           style={{
@@ -76,26 +106,27 @@ export const BezierEdge = memo(({
           }}
           className="nodrag nopan"
         >
-          <button
-            onClick={onDelete}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`
-              w-5 h-5 rounded-full flex items-center justify-center
-              bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold
-              shadow-lg transition-all duration-200
-              ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
-            `}
-            title="Delete connection"
-            type="button"
-          >
-            ×
-          </button>
+          {selected && (
+            <button
+              onClick={onDelete}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`
+                w-6 h-6 rounded-full flex items-center justify-center
+                bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold
+                shadow-lg transition-all duration-200
+              `}
+              title="Delete connection"
+              type="button"
+            >
+              ×
+            </button>
+          )}
         </div>
       </EdgeLabelRenderer>
     </>
   );
 });
 
-BezierEdge.displayName = "BezierEdge";
+AnimatedDottedEdge.displayName = "AnimatedDottedEdge";
 
-export default BezierEdge;
+export default AnimatedDottedEdge;

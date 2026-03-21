@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import type { Node, Edge } from "@xyflow/react";
 
 interface HistoryState {
@@ -16,20 +16,6 @@ interface UseUndoRedoReturn {
   getHistory: () => { past: HistoryState[]; future: HistoryState[] };
 }
 
-function areStatesEqual(a: HistoryState, b: HistoryState): boolean {
-  if (a.nodes.length !== b.nodes.length || a.edges.length !== b.edges.length) {
-    return false;
-  }
-  
-  const nodesJson = JSON.stringify(a.nodes.map(n => ({ id: n.id, position: n.position, type: n.type })));
-  const nodesJsonB = JSON.stringify(b.nodes.map(n => ({ id: n.id, position: n.position, type: n.type })));
-  
-  const edgesJson = JSON.stringify(a.edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
-  const edgesJsonB = JSON.stringify(b.edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
-  
-  return nodesJson === nodesJsonB && edgesJson === edgesJsonB;
-}
-
 export function useUndoRedo(
   nodes: Node[],
   edges: Edge[],
@@ -40,137 +26,117 @@ export function useUndoRedo(
   const [past, setPast] = useState<HistoryState[]>([]);
   const [future, setFuture] = useState<HistoryState[]>([]);
   
-  const pendingRef = useRef<Node[] | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Store latest nodes/edges in refs for access in callbacks
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const isUndoRedoRef = useRef(false);
   const lastPushedRef = useRef<string>("");
-  const isUndoRedoRef = useRef<boolean>(false);
+  
+  // Update refs when nodes/edges change
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+  }, [nodes, edges]);
 
   const getStateHash = (nodes: Node[], edges: Edge[]): string => {
-    const nodesHash = JSON.stringify(nodes.map(n => ({ id: n.id, position: n.position })));
-    // Fixed: was e.target twice, should be e.source and e.target
-    const edgesHash = JSON.stringify(edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
-    return `${nodesHash}:${edgesHash}`;
+    const nodesJson = JSON.stringify(nodes.map(n => ({ id: n.id, position: n.position })));
+    const edgesJson = JSON.stringify(edges.map(e => ({ id: e.id, source: e.source, target: e.target })));
+    return `${nodesJson}:${edgesJson}`;
   };
 
   const pushToHistory = useCallback(() => {
-    // Skip if we're in the middle of an undo/redo operation
-    if (isUndoRedoRef.current) {
-      return;
-    }
+    if (isUndoRedoRef.current) return;
 
-    const currentState: HistoryState = { nodes, edges };
-    const stateHash = getStateHash(nodes, edges);
+    const currentNodes = nodesRef.current;
+    const currentEdges = edgesRef.current;
+    const stateHash = getStateHash(currentNodes, currentEdges);
     
-    if (stateHash === lastPushedRef.current) {
-      return;
-    }
+    if (stateHash === lastPushedRef.current) return;
     
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    const newState: HistoryState = { 
+      nodes: JSON.parse(JSON.stringify(currentNodes)), 
+      edges: JSON.parse(JSON.stringify(currentEdges)) 
+    };
     
-    if (pendingRef.current !== null) {
-      const pendingState = { nodes: pendingRef.current, edges };
-      if (areStatesEqual(pendingState, currentState)) {
-        return;
+    setPast(prev => {
+      const newPast = [...prev, newState];
+      if (newPast.length > maxHistory) {
+        newPast.shift();
       }
-      pendingRef.current = nodes;
-      return;
-    }
+      return newPast;
+    });
     
-    pendingRef.current = nodes;
-    
-    timeoutRef.current = setTimeout(() => {
-      setPast((prevPast) => {
-        const newPast = [...prevPast, currentState];
-        
-        if (newPast.length > maxHistory) {
-          newPast.shift();
-        }
-        
-        return newPast;
-      });
-      
-      setFuture([]);
-      
-      lastPushedRef.current = getStateHash(currentState.nodes, currentState.edges);
-      pendingRef.current = null;
-      timeoutRef.current = null;
-    }, 300);
-  }, [nodes, edges, maxHistory]);
+    setFuture([]);
+    lastPushedRef.current = stateHash;
+  }, [maxHistory]);
 
   const undo = useCallback((): HistoryState | null => {
     if (past.length === 0) return null;
     
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-      pendingRef.current = null;
-    }
-    
-    const previous = past[past.length - 1];
-    
-    // Set flag to prevent pushToHistory from firing
     isUndoRedoRef.current = true;
     
-    setFuture((prevFuture) => [
-      { nodes, edges },
-      ...prevFuture,
-    ]);
+    const previous = past[past.length - 1];
+    const currentState: HistoryState = {
+      nodes: JSON.parse(JSON.stringify(nodesRef.current)),
+      edges: JSON.parse(JSON.stringify(edgesRef.current))
+    };
     
-    setPast((prevPast) => prevPast.slice(0, -1));
+    // Add current state to future
+    setFuture(prev => [currentState, ...prev]);
     
+    // Remove last state from past
+    setPast(prev => prev.slice(0, -1));
+    
+    // Restore previous state
     setNodes(previous.nodes);
     setEdges(previous.edges);
     
-    // Update the last pushed hash to the restored state
+    // Update hash to prevent re-pushing
     lastPushedRef.current = getStateHash(previous.nodes, previous.edges);
     
-    // Reset flag after state update
+    // Reset flag
     setTimeout(() => {
       isUndoRedoRef.current = false;
-    }, 50);
+    }, 100);
     
     return previous;
-  }, [past, nodes, edges, setNodes, setEdges]);
+  }, [past, setNodes, setEdges]);
 
   const redo = useCallback((): HistoryState | null => {
     if (future.length === 0) return null;
     
-    const next = future[0];
-    
-    // Set flag to prevent pushToHistory from firing
     isUndoRedoRef.current = true;
     
-    setPast((prevPast) => [
-      ...prevPast,
-      { nodes, edges },
-    ]);
+    const next = future[0];
+    const currentState: HistoryState = {
+      nodes: JSON.parse(JSON.stringify(nodesRef.current)),
+      edges: JSON.parse(JSON.stringify(edgesRef.current))
+    };
     
-    setFuture((prevFuture) => prevFuture.slice(1));
+    // Add current state to past
+    setPast(prev => [...prev, currentState]);
     
+    // Remove first state from future
+    setFuture(prev => prev.slice(1));
+    
+    // Restore next state
     setNodes(next.nodes);
     setEdges(next.edges);
     
-    // Update the last pushed hash to the restored state
+    // Update hash to prevent re-pushing
     lastPushedRef.current = getStateHash(next.nodes, next.edges);
     
-    // Reset flag after state update
+    // Reset flag
     setTimeout(() => {
       isUndoRedoRef.current = false;
-    }, 50);
+    }, 100);
     
     return next;
-  }, [future, nodes, edges, setNodes, setEdges]);
+  }, [future, setNodes, setEdges]);
 
   const clear = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
     setPast([]);
     setFuture([]);
-    pendingRef.current = null;
     lastPushedRef.current = "";
   }, []);
 

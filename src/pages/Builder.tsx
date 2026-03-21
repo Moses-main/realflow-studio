@@ -46,7 +46,7 @@ import ComponentPalette, { type PaletteItem } from "@/components/builder/Compone
 import AISidebar from "@/components/builder/AISidebar";
 import CustomNode from "@/components/builder/CustomNode";
 import { TestPanel } from "@/components/builder/TestPanel";
-import { BezierEdge } from "@/components/builder/BezierEdge";
+import { AnimatedDottedEdge } from "@/components/builder/BezierEdge";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOptimization";
@@ -55,10 +55,10 @@ import { ConnectButton } from "@/components/auth/ConnectButton";
 // Node types - maps component types to React Flow node components
 const nodeTypes = { custom: CustomNode };
 
-// Edge types - uses custom BezierEdge for smooth curves
+// Edge types - uses AnimatedDottedEdge for animated flow visualization
 const edgeTypes = {
-  bezier: BezierEdge,
-  default: BezierEdge,
+  animatedDotted: AnimatedDottedEdge,
+  default: AnimatedDottedEdge,
 };
 
 /**
@@ -101,12 +101,22 @@ function BuilderCanvas() {
     clear: clearHistory 
   } = useUndoRedo(nodes, edges, setNodes, setEdges);
 
-  // Push to history when nodes or edges change
+  // Push to history when nodes or edges change (debounced via hook)
+  const prevNodesRef = useRef<Node[]>([]);
+  const prevEdgesRef = useRef<Edge[]>([]);
+  
   useEffect(() => {
-    if (nodes.length > 0 || edges.length > 0) {
-      pushToHistory();
+    const nodesChanged = JSON.stringify(nodes) !== JSON.stringify(prevNodesRef.current);
+    const edgesChanged = JSON.stringify(edges) !== JSON.stringify(prevEdgesRef.current);
+    
+    if (nodesChanged || edgesChanged) {
+      if (nodes.length > 0 || edges.length > 0) {
+        pushToHistory();
+      }
+      prevNodesRef.current = nodes;
+      prevEdgesRef.current = edges;
     }
-  }, [nodes, edges]);
+  }, [nodes, edges, pushToHistory]);
 
   // =====================
   // MOBILE OPTIMIZATION
@@ -175,7 +185,7 @@ function BuilderCanvas() {
       const newEdge: Edge = {
         ...connection,
         id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-        type: "bezier", // Use bezier for smooth curves
+        type: "animatedDotted",
         animated: false,
         style: { stroke: "#6366f1", strokeWidth: 2 },
       };
@@ -661,8 +671,8 @@ function BuilderCanvas() {
             snapToGrid
             snapGrid={[16, 16]}
             defaultEdgeOptions={{
-              type: "bezier",
-              style: { stroke: "#6366f1", strokeWidth: 2 },
+              type: "animatedDotted",
+              style: { stroke: "#6366f1", strokeWidth: 2, strokeDasharray: "8 4" },
             }}
             connectionLineStyle={{ stroke: "#6366f1", strokeWidth: 2 }}
             connectionLineType="bezier"
