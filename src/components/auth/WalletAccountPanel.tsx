@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Wallet, Copy, Check, ExternalLink, RefreshCw, 
@@ -31,15 +31,26 @@ export function WalletAccountPanel() {
   const [loadingBalances, setLoadingBalances] = useState<Record<string, boolean>>({});
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
-  // Switch account - reopens Privy modal to select different wallet/account
+  // Switch account - reopens Privy modal to add/select different wallet/account
   const handleSwitchAccount = async () => {
     setIsOpen(false);
     try {
-      await login();
+      // This will open Privy's wallet selection modal
+      // User can then choose a different wallet or connect a new one
+      await connectWallet();
     } catch (error) {
       console.error("Switch account failed:", error);
     }
   };
+
+  // Select a specific account (for external wallets with multiple accounts)
+  const handleSelectAccount = useCallback((address: string) => {
+    // For embedded wallets, we can't switch - user needs to use Switch Account button
+    // For external wallets like MetaMask, they should switch in their wallet app
+    // Then click Switch Account to reconnect with the new account
+    console.log("Selected account:", address);
+    setIsOpen(false);
+  }, []);
 
   // Fetch balances for all accounts
   const fetchBalances = async () => {
@@ -263,7 +274,7 @@ export function WalletAccountPanel() {
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm transition-colors"
                   >
                     <RefreshCcw className="w-4 h-4" />
-                    Switch Account
+                    Add / Switch Account
                   </button>
                   <button
                     onClick={() => {
@@ -276,6 +287,9 @@ export function WalletAccountPanel() {
                     Sign Out
                   </button>
                 </div>
+                <p className="text-xs text-[var(--text-muted)] text-center mt-2">
+                  Click "Add / Switch Account" to connect a different wallet or account
+                </p>
               </div>
             </motion.div>
           </>

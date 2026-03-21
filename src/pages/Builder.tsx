@@ -820,7 +820,8 @@ function BuilderCanvas() {
         <div className="flex-1 overflow-y-auto">
           {isTestModeEnabled ? (
             <TestPanel 
-              nodes={nodes} 
+              nodes={nodes}
+              edges={edges}
               onClose={() => setIsTestModeEnabled(false)} 
             />
           ) : (
