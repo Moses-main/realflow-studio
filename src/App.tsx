@@ -11,6 +11,7 @@ import Analytics from "./pages/Analytics";
 import Explore from "./pages/Explore";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Landing from "./pages/Landing";
 import { Search } from "lucide-react";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -134,7 +135,7 @@ const App = () => {
           <BrowserRouter>
             <KeyboardShortcutsHandler />
             <Routes>
-              <Route path="/" element={<Navigate to="/canvas" replace />} />
+              <Route path="/" element={<ErrorBoundary><Landing /></ErrorBoundary>} />
               <Route path="/canvas" element={<ProtectedRoute><ErrorBoundary><Builder /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
               <Route path="/marketplaces" element={<ErrorBoundary><MarketplaceList /></ErrorBoundary>} />
