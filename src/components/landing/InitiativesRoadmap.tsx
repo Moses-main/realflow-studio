@@ -3,26 +3,26 @@ import { Circle, Briefcase, Bot, Smartphone, Globe, Flag, MessageSquare } from "
 
 const initiatives = [
   {
-    category: "Core Product",
+    category: "Platform Core",
     icon: Circle,
     color: "text-cyan-400",
     bgColor: "bg-cyan-400/10",
     count: 99,
     children: [
-      { name: "Infra stability", icon: Briefcase, count: 28, color: "text-cyan-500" },
-      { name: "Autonomous systems", icon: Bot, count: 16, color: "text-blue-400" },
-      { name: "Mobile apps", icon: Smartphone, count: 8, color: "text-blue-500" },
+      { name: "Smart Contract Engine", icon: Briefcase, count: 28, color: "text-cyan-500" },
+      { name: "AI Co-Builder", icon: Bot, count: 16, color: "text-blue-400" },
+      { name: "Fiat On-Ramp", icon: Smartphone, count: 8, color: "text-blue-500" },
     ]
   },
   {
-    category: "APAC Expansion",
+    category: "Asset Classes",
     icon: Globe,
     color: "text-rose-500",
     bgColor: "bg-rose-500/10",
     count: 21,
     children: [
-      { name: "Japan Launch", icon: Flag, count: 12, color: "text-rose-600" },
-      { name: "Customer-driven priorities", icon: MessageSquare, count: 9, color: "text-pink-500" },
+      { name: "Real Estate Tokens", icon: Flag, count: 12, color: "text-rose-600" },
+      { name: "Digital Art & IP", icon: MessageSquare, count: 9, color: "text-pink-500" },
     ]
   }
 ];
@@ -115,7 +115,7 @@ export function InitiativesRoadmap() {
         {/* The Timeline Canvas Region */}
         <div className="absolute top-16 left-[280px] right-0 bottom-0 overflow-hidden">
           
-          {/* Project 1: UI Refresh */}
+          {/* Project 1: Visual Builder Polish */}
           <motion.div 
             initial={{ width: 0, opacity: 0 }}
             whileInView={{ width: "35%", opacity: 1 }}
@@ -126,7 +126,7 @@ export function InitiativesRoadmap() {
             {/* Title above bar */}
             <div className="absolute -top-6 left-0 flex items-center gap-1.5 text-xs text-emerald-400 whitespace-nowrap">
               <span className="flex gap-0.5"><div className="w-1 h-1 bg-current rounded-full"/><div className="w-1 h-1 bg-current rounded-full"/></span> 
-              UI Refresh <span className="text-[10px] bg-emerald-400/20 px-1 rounded text-emerald-300">✓</span>
+              Visual Builder <span className="text-[10px] bg-emerald-400/20 px-1 rounded text-emerald-300">✓</span>
             </div>
             
             {/* The Bar */}
@@ -135,8 +135,8 @@ export function InitiativesRoadmap() {
               <div className="absolute left-[30%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 border border-white/30 rotate-45" />
               <div className="absolute left-[60%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 border border-rose-500/50 rotate-45 bg-rose-500/20" />
               
-              <div className="absolute left-0 -bottom-5 text-[9px] text-zinc-600 text-center w-[60%]">Core screens</div>
-              <div className="absolute left-[60%] -bottom-5 text-[9px] text-zinc-600 text-center w-[40%]">Polish</div>
+              <div className="absolute left-0 -bottom-5 text-[9px] text-zinc-600 text-center w-[60%]">Canvas UI</div>
+              <div className="absolute left-[60%] -bottom-5 text-[9px] text-zinc-600 text-center w-[40%]">Beta Release</div>
             </div>
           </motion.div>
 
@@ -145,7 +145,7 @@ export function InitiativesRoadmap() {
              <path d="M 0 50 C 50 50, 100 0, 250 0" fill="none" stroke="currentColor" strokeWidth="1" className="text-emerald-500" strokeDasharray="4 4" />
           </svg>
 
-          {/* Project 2: Split fares */}
+          {/* Project 2: EIP-1167 Proxies */}
           <motion.div 
             initial={{ width: 0, opacity: 0 }}
             whileInView={{ width: "45%", opacity: 1 }}
@@ -155,14 +155,14 @@ export function InitiativesRoadmap() {
           >
             <div className="absolute -top-6 left-0 flex items-center gap-1.5 text-xs text-emerald-500 whitespace-nowrap">
               <span className="flex border border-current rounded-sm px-0.5 text-[8px]">O</span>
-              Split fares <span className="text-[10px] bg-emerald-500/20 px-1 rounded text-emerald-400">~</span>
+              Factory Proxies <span className="text-[10px] bg-emerald-500/20 px-1 rounded text-emerald-400">~</span>
             </div>
             <div className="w-full h-full rounded border border-white/10 bg-gradient-to-r from-zinc-800 to-sky-900/30 relative">
               <div className="absolute left-[20%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 border border-white/30 rotate-45" />
               <div className="absolute left-[70%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 border border-white/30 rotate-45" />
               
-              <div className="absolute left-[10%] -bottom-5 text-[9px] text-zinc-600 w-[20%] text-center">Internal</div>
-              <div className="absolute left-[60%] -bottom-5 text-[9px] text-zinc-600 w-[40%] text-center">Public Beta</div>
+              <div className="absolute left-[10%] -bottom-5 text-[9px] text-zinc-600 w-[20%] text-center">Devnet</div>
+              <div className="absolute left-[60%] -bottom-5 text-[9px] text-zinc-600 w-[40%] text-center">Testnet (Amoy)</div>
             </div>
           </motion.div>
 
@@ -171,7 +171,7 @@ export function InitiativesRoadmap() {
              <path d="M 0 0 C 150 0, 150 70, 250 70" fill="none" stroke="white" strokeWidth="1" />
           </svg>
 
-          {/* Project 3: Autonomy status clarity */}
+          {/* Project 3: Automated Deployment */}
           <motion.div 
             initial={{ width: 0, opacity: 0 }}
             whileInView={{ width: "25%", opacity: 1 }}
@@ -181,18 +181,18 @@ export function InitiativesRoadmap() {
           >
             <div className="absolute -top-6 left-0 flex items-center gap-1.5 text-xs text-blue-400 whitespace-nowrap">
               <span className="flex"><div className="w-2 h-2 border-[1.5px] border-current rounded-full" /></span>
-              Autonomy status clarity <span className="text-[10px] bg-emerald-500/20 px-1 rounded text-emerald-400">~</span>
+              1-Click Deployment <span className="text-[10px] bg-emerald-500/20 px-1 rounded text-emerald-400">~</span>
             </div>
             <div className="w-full h-full rounded border border-white/10 bg-zinc-900 relative">
               <div className="absolute left-[45%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 border border-white/30 rotate-45" />
-              <div className="absolute left-0 -bottom-5 text-[9px] text-zinc-600 w-full text-center">Alpha</div>
+              <div className="absolute left-0 -bottom-5 text-[9px] text-zinc-600 w-full text-center">Mainnet V1</div>
             </div>
           </motion.div>
 
           {/* Generic placeholder background row */}
           <div className="absolute top-[19rem] left-[5%] w-[30%] h-7 rounded border border-white/5 bg-transparent">
              <div className="absolute left-[60%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 border border-white/10 rotate-45" />
-             <div className="absolute left-0 -bottom-5 text-[9px] text-zinc-700 w-full text-center">GA</div>
+             <div className="absolute left-0 -bottom-5 text-[9px] text-zinc-700 w-full text-center">V2 Audit</div>
           </div>
         </div>
 

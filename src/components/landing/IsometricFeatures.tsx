@@ -51,9 +51,9 @@ export function IsometricFeatures() {
                 </g>
               </svg>
             </div>
-            <h3 className="text-white text-base font-medium mb-3">Built for purpose</h3>
+            <h3 className="text-white text-base font-medium mb-3">Tokenize Real-World Assets</h3>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
-              RealFlow is shaped by the practices and principles of world-class product teams.
+              RealFlow provides a complete suite of visual tools to seamlessly fractionalize and trade properties.
             </p>
           </motion.div>
 
@@ -109,9 +109,9 @@ export function IsometricFeatures() {
                 </g>
               </svg>
             </div>
-            <h3 className="text-white text-base font-medium mb-3">Powered by AI agents</h3>
+            <h3 className="text-white text-base font-medium mb-3">AI-Powered Generation</h3>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
-              Designed for workflows shared by humans and agents. From drafting PRDs to pushing PRs.
+              Deploy secure, gas-optimized ERC-1155 proxy contracts purely through conversation and drag-and-drop.
             </p>
           </motion.div>
 
@@ -160,9 +160,9 @@ export function IsometricFeatures() {
                 </g>
               </svg>
             </div>
-            <h3 className="text-white text-base font-medium mb-3">Designed for speed</h3>
+            <h3 className="text-white text-base font-medium mb-3">One-Click Deployment</h3>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
-              Reduces noise and restores momentum to help teams ship with high velocity and focus.
+              Push your custom RWA marketplaces natively to Polygon Amoy testnets with instant speed and focus.
             </p>
           </motion.div>
 
