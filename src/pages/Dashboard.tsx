@@ -13,6 +13,14 @@ import { useLanguage } from "@/components/theme/LanguageSwitcher";
 import { useStats, useMarketplaces, useTemplates } from "@/hooks/useData";
 import { ConnectButton } from "@/components/auth/ConnectButton";
 
+const navItems = [
+  { icon: Blocks, label: "Dashboard", path: "/dashboard" },
+  { icon: Package, label: "My Marketplaces", path: "/marketplaces" },
+  { icon: BarChart3, label: "Analytics", path: "/analytics" },
+  { icon: Globe, label: "Explore", path: "/explore" },
+  { icon: Settings, label: "Settings", path: "/settings" },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
