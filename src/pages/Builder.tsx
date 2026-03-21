@@ -635,20 +635,20 @@ function BuilderCanvas() {
             connectionLineType="bezier"
             style={{ backgroundColor: "#0e1012" }}
             minZoom={0.1}
-            maxZoom={isMobile ? 2 : 4}
-            defaultViewport={{ x: 50, y: 50, zoom: isMobile ? 0.8 : 1 }}
-            fitView={nodes.length === 0}
-            fitViewOptions={{ padding: isMobile ? 0.3 : 0.2 }}
-            zoomOnScroll={!isTouchDevice}
-            zoomOnPinch={isTouchDevice}
-            panOnScroll={panOnScroll}
-            panOnDrag={isMobile ? [2] : [1, 2]}
-            selectNodesOnDrag={!isMobile}
+            maxZoom={2}
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            fitView
+            fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+            zoomOnScroll
+            zoomOnPinch
+            panOnScroll
+            panOnDrag
+            selectNodesOnDrag={false}
             nodesDraggable
-            nodesConnectable={!isMobile}
+            nodesConnectable
             elementsSelectable
-            multiSelectionKeyCode={isMobile ? null : "Shift"}
-            deleteKeyCode={isMobile ? null : "Delete"}
+            multiSelectionKeyCode="Shift"
+            deleteKeyCode="Delete"
             proOptions={{ hideAttribution: true }}
           >
             {/* Background Grid */}
