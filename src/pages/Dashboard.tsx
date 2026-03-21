@@ -84,7 +84,7 @@ const Dashboard = () => {
               <p className="text-sm text-[var(--text-secondary)]">Build and manage your RWA marketplaces</p>
             </div>
             <button
-              onClick={() => navigate("/builder")}
+              onClick={() => navigate("/canvas")}
               className="btn-primary flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -160,7 +160,7 @@ const Dashboard = () => {
                   <div
                     key={marketplace.name}
                     className="flex items-center justify-between p-3 rounded-lg surface-hover cursor-pointer"
-                    onClick={() => navigate("/builder")}
+                    onClick={() => navigate("/marketplaces")}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[var(--surface-elevated)] flex items-center justify-center">
@@ -206,7 +206,7 @@ const Dashboard = () => {
                   templates.slice(0, 4).map((template) => (
                     <button
                       key={template.id}
-                      onClick={() => navigate("/builder")}
+                      onClick={() => navigate("/canvas")}
                       className="w-full p-3 rounded-lg surface-hover text-left flex items-center justify-between group"
                     >
                       <div>

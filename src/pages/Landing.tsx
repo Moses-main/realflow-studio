@@ -148,7 +148,7 @@ export default function Landing() {
               {user.isWalletConnected ? (
                 <>
                   <button
-                    onClick={() => navigate("/builder")}
+                    onClick={() => navigate("/canvas")}
                     className="btn-primary flex items-center gap-2 px-6 py-3 text-base"
                   >
                     {t("hero.cta")}
@@ -252,7 +252,7 @@ export default function Landing() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                onClick={() => navigate("/builder")}
+                onClick={() => navigate("/canvas")}
                 className="card-hover cursor-pointer"
               >
                 <div className="w-full aspect-video bg-[var(--surface-elevated)] rounded-lg mb-4 flex items-center justify-center">

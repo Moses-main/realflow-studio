@@ -2,1729 +2,689 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ReactFlow,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  Background,
-  Controls,
-  MiniMap,
+  ReactFlowProvider,
   type Connection,
   type Edge,
   type Node,
-  ReactFlowProvider,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+  Background,
+  MiniMap,
+  applyNodeChanges,
+  applyEdgeChanges,
+  type NodeChange,
+  type EdgeChange,
+  type OnConnect,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Blocks, ArrowLeft, Rocket, Sparkles, PanelRightOpen, 
-  PanelRightClose, Check, Loader2, Save, Trash2, Download, Wallet, Pin, Menu, X, FileCode, FileJson, Undo2, Redo2, Github, ExternalLink, Eye, Share2, Link, LayoutTemplate, FlaskConical
+  Blocks, 
+  ArrowLeft, 
+  Sparkles, 
+  Save, 
+  Trash2, 
+  Wallet, 
+  Menu, 
+  X, 
+  Undo2, 
+  Redo2, 
+  ZoomIn, 
+  ZoomOut, 
+  Maximize2,
+  FlaskConical, 
+  Copy, 
+  Clipboard, 
+  ChevronDown
 } from "lucide-react";
-import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
-import { TestPanel } from "@/components/builder/TestPanel";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import ComponentPalette, { type PaletteItem } from "@/components/builder/ComponentPalette";
 import AISidebar from "@/components/builder/AISidebar";
 import CustomNode from "@/components/builder/CustomNode";
-import { CreativeMode } from "@/components/ai/CreativeMode";
-import { useAuth } from "@/hooks/useAuth";
+import { BezierEdge } from "@/components/builder/BezierEdge";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
+// Node types - maps component types to React Flow node components
 const nodeTypes = { custom: CustomNode };
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// Edge types - uses custom BezierEdge for smooth curves
+const edgeTypes = {
+  bezier: BezierEdge,
+  default: BezierEdge,
+};
 
-const initialNodes: Node[] = [
-  {
-    id: "1",
-    type: "custom",
-    position: { x: 250, y: 50 },
-    data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" },
-  },
-  {
-    id: "2",
-    type: "custom",
-    position: { x: 100, y: 200 },
-    data: { label: "Token Mint", componentType: "mintButton", category: "Core" },
-  },
-  {
-    id: "3",
-    type: "custom",
-    position: { x: 400, y: 200 },
-    data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" },
-  },
-];
-
-const initialEdges: Edge[] = [
-  { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-  { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-];
-
-const Builder = () => {
+/**
+ * Inner Builder component - uses React Flow hooks
+ * Must be wrapped with ReactFlowProvider
+ */
+function BuilderCanvas() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, connectWallet } = useAuth();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [aiOpen, setAiOpen] = useState(true);
-  const [creativeMode, setCreativeMode] = useState(false);
-  const [deploying, setDeploying] = useState(false);
-  const [deployed, setDeployed] = useState(false);
-  const [deployAddress, setDeployAddress] = useState("");
-  const [showPinningReminder, setShowPinningReminder] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showDeployConfirm, setShowDeployConfirm] = useState(false);
-  const [gasEstimate, setGasEstimate] = useState<string | null>(null);
-  const [estimatingGas, setEstimatingGas] = useState(false);
-  const [txStatus, setTxStatus] = useState<"pending" | "success" | "failed" | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([{ nodes: initialNodes, edges: initialEdges }]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const [showGitHubExport, setShowGitHubExport] = useState(false);
-  const [githubPat, setGithubPat] = useState("");
-  const [githubRepo, setGithubRepo] = useState("realflow-marketplace");
-  const [githubUsername, setGithubUsername] = useState("");
-  const [exportingToGithub, setExportingToGithub] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified" | null>(null);
-  const [testMode, setTestMode] = useState(false);
-  const [connectingWallet, setConnectingWallet] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const idCounter = useRef(4);
-  const draggedItem = useRef<PaletteItem | null>(null);
+  const reactFlow = useReactFlow();
+  
+  // =====================
+  // STATE MANAGEMENT
+  // =====================
+  
+  // Canvas state - nodes and edges
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  // UI state
+  const [isTestModeEnabled, setIsTestModeEnabled] = useState(false);
+  const [isLeftToolbarOpen, setIsLeftToolbarOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  
+  // Clipboard for copy/paste
+  const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
 
-  const onConnect = useCallback(
-    (params: Connection) =>
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "hsl(175, 80%, 50%)" } }, eds)),
-    [setEdges]
-  );
+  // =====================
+  // UNDO/REDO SYSTEM
+  // =====================
+  
+  const { 
+    pushToHistory, 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo, 
+    clear: clearHistory 
+  } = useUndoRedo(nodes, edges, setNodes, setEdges);
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
+  // Push to history when nodes or edges change
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      pushToHistory();
+    }
+  }, [nodes, edges]);
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (!draggedItem.current || !reactFlowWrapper.current) return;
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = { x: e.clientX - bounds.left - 90, y: e.clientY - bounds.top - 25 };
-      const newNode: Node = {
-        id: String(idCounter.current++),
-        type: "custom",
-        position,
-        data: { 
-          label: draggedItem.current.label, 
-          componentType: draggedItem.current.type,
-          category: draggedItem.current.category 
-        },
-      };
-      setNodes((nds) => [...nds, newNode]);
-      draggedItem.current = null;
+  // =====================
+  // NODE HANDLERS
+  // =====================
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      
+      // Track selection changes
+      changes.forEach((change) => {
+        if (change.type === "select") {
+          setSelectedNodeIds((prev) => {
+            if (change.selected) {
+              return [...prev, change.id];
+            }
+            return prev.filter((id) => id !== change.id);
+          });
+        }
+      });
     },
     [setNodes]
   );
 
-  const estimateGas = async () => {
-    setEstimatingGas(true);
-    try {
-      const componentCount = nodes.length;
-      const complexity = nodes.reduce((acc, node) => {
-        const type = node.data.componentType as string;
-        if (type === "auctionEngine" || type === "paymentSplitter") return acc + 2;
-        if (type === "mintButton" || type === "assetUpload") return acc + 1;
-        return acc;
-      }, 0);
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    },
+    [setEdges]
+  );
 
-      const response = await fetch(`${API_URL}/api/web3/estimate-deployment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          contractType: "marketplace",
-          nodes: nodes.map(n => n.data.componentType),
-          deployer: user.address,
-          complexity,
-          componentCount,
-        }),
-      });
+  // =====================
+  // CONNECTION HANDLER
+  // =====================
 
-      if (response.ok) {
-        const data = await response.json();
-        setGasEstimate(data.estimatedGas || calculateFallbackEstimate(componentCount, complexity));
-      } else {
-        setGasEstimate(calculateFallbackEstimate(componentCount, complexity));
-      }
-    } catch (error) {
-      console.warn("Recoverable error during gas estimation:", error);
-      const componentCount = nodes.length;
-      setGasEstimate(calculateFallbackEstimate(componentCount, 0));
-    } finally {
-      setEstimatingGas(false);
-    }
-  };
-
-  const calculateFallbackEstimate = (components: number, complexity: number): string => {
-    const baseGas = 1_500_000;
-    const perComponent = 200_000;
-    const complexityMultiplier = 1 + complexity * 0.25;
-    const estimatedGas = (baseGas + components * perComponent) * complexityMultiplier;
-    const gasPriceGwei = 30;
-    const ethPriceUsd = 0.50;
-    const estimatedCost = (estimatedGas * gasPriceGwei * 1e-9) * ethPriceUsd;
-    return `~${estimatedCost.toFixed(4)} MATIC (${Math.round(estimatedGas / 1e6)}M gas)`;
-  };
-
-  const handleDeployClick = async () => {
-    if (!user.isWalletConnected || !user.address) {
-      setConnectingWallet(true);
-      toast({
-        title: "Wallet not connected",
-        description: "Connecting wallet...",
-      });
-      try {
-        await connectWallet();
-        toast({
-          title: "Wallet connected",
-          description: "You can now deploy your marketplace.",
-        });
-      } catch (error) {
-        toast({
-          title: "Connection failed",
-          description: "Failed to connect wallet. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setConnectingWallet(false);
-      }
-      return;
-    }
-    estimateGas();
-    setShowDeployConfirm(true);
-  };
-
-  const handleConfirmDeploy = async () => {
-    setShowDeployConfirm(false);
-    setDeploying(true);
-    setTxStatus("pending");
-    setDeployed(false);
-    setDeployAddress("");
-    const mockTxHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    setTxHash(mockTxHash);
-
-    try {
-      const response = await fetch(`${API_URL}/api/web3/estimate-deployment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          contractType: "marketplace",
-          nodes: nodes.map(n => n.data.componentType),
-          deployer: user.address
-        }),
-      });
-
-      if (response.ok) {
-        setDeployAddress("0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be");
-        setDeployed(true);
-        setTxStatus("success");
-        toast({
-          title: "Marketplace Deployed!",
-          description: `Deployed at ${deployAddress} on Polygon Amoy`,
-        });
-      } else {
-        throw new Error("Deployment failed");
-      }
-    } catch (error) {
-      setTxStatus("failed");
-      setDeploying(false);
-      toast({
-        title: "Deployment Failed",
-        description: error instanceof Error ? error.message : "Failed to deploy marketplace. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (!txHash || txStatus !== "pending") return;
-
-    const checkTxStatus = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/web3/tx-status?hash=${txHash}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.status === "success") {
-            setTxStatus("success");
-            toast({
-              title: "Transaction Confirmed!",
-              description: "Your transaction was successful.",
-            });
-          } else if (data.status === "failed") {
-            setTxStatus("failed");
-            toast({
-              title: "Transaction Failed",
-              description: "Your transaction failed. Please try again.",
-              variant: "destructive",
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check tx status:", error);
-      }
-    };
-
-    const interval = setInterval(checkTxStatus, 5000);
-    return () => clearInterval(interval);
-  }, [txHash, txStatus]);
-
-  useEffect(() => {
-    if (!autoSaveEnabled) return;
-
-    const autoSaveInterval = setInterval(() => {
-      const config = { nodes, edges };
-      localStorage.setItem("marketplace-config", JSON.stringify(config));
-      setLastSaved(new Date());
-    }, 30000);
-
-    return () => clearInterval(autoSaveInterval);
-  }, [nodes, edges, autoSaveEnabled]);
-
-  useEffect(() => {
-    if (lastSaved) {
-      const timeout = setTimeout(() => {
-        setIsSaving(false);
-      }, 2000);
-      return () => clearTimeout(timeout);
-    }
-  }, [lastSaved]);
-
-  useEffect(() => {
-    const newState = { nodes, edges };
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      if (JSON.stringify(newHistory[newHistory.length - 1]) !== JSON.stringify(newState)) {
-        return [...newHistory, newState].slice(-50);
-      }
-      return prev;
-    });
-    setHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [nodes, edges]);
-
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const prevState = history[historyIndex - 1];
-      setNodes(prevState.nodes);
-      setEdges(prevState.edges);
-      setHistoryIndex(prev => prev - 1);
-    }
-  }, [history, historyIndex, setNodes, setEdges]);
-
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1];
-      setNodes(nextState.nodes);
-      setEdges(nextState.edges);
-      setHistoryIndex(prev => prev + 1);
-    }
-  }, [history, historyIndex, setNodes, setEdges]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          redo();
-        } else {
-          undo();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const config = { nodes, edges };
-      localStorage.setItem("marketplace-config", JSON.stringify(config));
-      setLastSaved(new Date());
-      toast({
-        title: "Saved!",
-        description: "Your marketplace design has been saved.",
-      });
-    } catch (error) {
-      toast({
-        title: "Save failed",
-        description: "Failed to save marketplace design.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const verifyContract = async () => {
-    if (!deployAddress) {
-      toast({
-        title: "No contract",
-        description: "Deploy a contract first before verifying.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setVerificationStatus("pending");
-    try {
-      const response = await fetch(`${API_URL}/api/web3/verify-contract`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: deployAddress }),
-      });
-
-      if (response.ok) {
-        setVerificationStatus("verified");
-        toast({
-          title: "Contract Verified!",
-          description: "Your contract has been verified on Polygonscan.",
-        });
-      } else {
-        throw new Error("Verification failed");
-      }
-    } catch (error) {
-      setVerificationStatus("unverified");
-      toast({
-        title: "Verification Failed",
-        description: "Could not verify contract. Try again later.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const generateSolidityCode = () => {
-    const componentTypes = nodes.map(n => n.data.componentType).filter(Boolean);
-    return `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-/**
- * Marketplace Contract
- * Generated by RealFlow Studio
- * Components: ${componentTypes.join(", ") || "none"}
- */
-contract Marketplace is ERC1155, Ownable {
-    uint256 private _tokenIdCounter;
-    
-    // Component flags
-    ${componentTypes.includes("assetUpload") ? "bool public hasAssetUpload = true;" : ""}
-    ${componentTypes.includes("mintButton") ? "bool public hasMintFunction = true;" : ""}
-    ${componentTypes.includes("listingGrid") ? "bool public hasListingGrid = true;" : ""}
-    ${componentTypes.includes("buyButton") ? "bool public hasBuyFunction = true;" : ""}
-    ${componentTypes.includes("auctionEngine") ? "bool public hasAuction = true;" : ""}
-    
-    constructor() ERC1155("") Ownable(msg.sender) {
-        _tokenIdCounter = 1;
-    }
-    
-    function mintRWA(
-        address to,
-        uint256 amount,
-        string memory uri
-    ) public onlyOwner returns (uint256) {
-        uint256 id = _tokenIdCounter++;
-        _mint(to, id, amount, bytes(uri));
-        return id;
-    }
-    
-    function mintBatchRWA(
-        address to,
-        uint256[] memory amounts,
-        string[] memory uris
-    ) public onlyOwner {
-        uint256[] memory ids = new uint256[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; i++) {
-            ids[i] = _tokenIdCounter++;
-        }
-        _mintBatch(to, ids, amounts, bytes(""));
-    }
-    
-    function setURI(uint256 id, string memory newuri) public onlyOwner {
-        _setURI(newuri);
-    }
-    
-    function withdraw() public onlyOwner {
-        payable(owner()).transfer(address(this).balance);
-    }
-    
-    receive() external payable {}
-}`;
-  };
-
-  const handleExport = (format: "json" | "solidity") => {
-    if (format === "json") {
-      const config = { nodes, edges };
-      const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "marketplace-config.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    } else {
-      const solidityCode = generateSolidityCode();
-      const blob = new Blob([solidityCode], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Marketplace.sol";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-    setShowExportDialog(false);
-    toast({
-      title: "Exported!",
-      description: `Your marketplace exported as ${format.toUpperCase()}`,
-    });
-  };
-
-  const handleGitHubExport = async () => {
-    if (!githubPat || !githubUsername || !githubRepo) {
-      toast({ title: "Missing fields", description: "Please fill in all fields", variant: "destructive" });
-      return;
-    }
-
-    setExportingToGithub(true);
-    try {
-      const config = { nodes, edges };
-      const solidityCode = generateSolidityCode();
+  const handleConnect: OnConnect = useCallback(
+    (connection: Connection) => {
+      // Validate connection
+      if (!connection.source || !connection.target) return;
       
-      const files = {
-        "marketplace-config.json": JSON.stringify(config, null, 2),
-        "contracts/Marketplace.sol": solidityCode,
-        "README.md": `# ${githubRepo}\n\nGenerated with RealFlow Studio\n\n## Components\n${nodes.map(n => `- ${n.data.label}`).join('\n')}\n\n## Deployment\nDeployed to Polygon Amoy testnet.\n`,
-        "package.json": JSON.stringify({
-          name: githubRepo,
-          version: "1.0.0",
-          scripts: {
-            deploy: "npx hardhat run scripts/deploy.js --network amoy"
-          }
-        }, null, 2),
+      const newEdge: Edge = {
+        ...connection,
+        id: `e-${connection.source}-${connection.target}-${Date.now()}`,
+        type: "bezier", // Use bezier for smooth curves
+        animated: false,
+        style: { stroke: "#6366f1", strokeWidth: 2 },
       };
-
-      const repoCreateRes = await fetch("https://api.github.com/user/repos", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${githubPat}`,
-          "Content-Type": "application/json",
-          Accept: "application/vnd.github.v3+json",
-        },
-        body: JSON.stringify({
-          name: githubRepo,
-          description: "Marketplace generated with RealFlow Studio",
-          private: true,
-          auto_init: true,
-        }),
-      });
-
-      if (!repoCreateRes.ok && repoCreateRes.status !== 422) {
-        const err = await repoCreateRes.json();
-        if (err.message !== "name already exists on this account") {
-          throw new Error(err.message || "Failed to create repository");
-        }
-      }
-
-      for (const [path, content] of Object.entries(files)) {
-        const encodedPath = Buffer.from(path).toString("base64");
-        await fetch(`https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${path}`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${githubPat}`,
-            "Content-Type": "application/json",
-            Accept: "application/vnd.github.v3+json",
-          },
-          body: JSON.stringify({
-            message: `Add ${path}`,
-            content: Buffer.from(content).toString("base64"),
-          }),
-        });
-      }
-
-      setShowGitHubExport(false);
+      
+      setEdges((eds) => [...eds, newEdge]);
+      
       toast({
-        title: "Exported to GitHub!",
-        description: `Repository created at github.com/${githubUsername}/${githubRepo}`,
-        action: (
-          <a
-            href={`https://github.com/${githubUsername}/${githubRepo}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Open
-          </a>
-        ),
+        title: "Connected",
+        description: "Components connected successfully",
       });
-    } catch (error) {
-      toast({
-        title: "Export failed",
-        description: error instanceof Error ? error.message : "Failed to export to GitHub",
-        variant: "destructive",
-      });
-    } finally {
-      setExportingToGithub(false);
-    }
-  };
+    },
+    [setEdges, toast]
+  );
 
-  const handleClear = () => {
-    setNodes([]);
-    setEdges([]);
-    toast({
-      title: "Canvas cleared",
-      description: "Start fresh with a new design.",
-    });
-  };
+  // =====================
+  // DRAG & DROP
+  // =====================
 
-  useEffect(() => {
-    const saved = localStorage.getItem("marketplace-config");
-    if (saved) {
-      try {
-        const config = JSON.parse(saved);
-        if (config.nodes && config.nodes.length > 0) {
-          setNodes(config.nodes);
-          setEdges(config.edges || []);
-        }
-      } catch (e) {
-        console.error("Failed to load saved config", e);
-      }
-    }
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
   }, []);
 
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      
+      const data = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text");
+      
+      if (data) {
+        try {
+          const paletteItem: PaletteItem = JSON.parse(data);
+          const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+          
+          if (!bounds) return;
+          
+          // Calculate position relative to viewport
+          const viewport = reactFlow.getViewport();
+          
+          const newNode: Node = {
+            id: `${paletteItem.type}-${Date.now()}`,
+            type: "custom",
+            position: {
+              x: (e.clientX - bounds.left - viewport.x) / viewport.zoom,
+              y: (e.clientY - bounds.top - viewport.y) / viewport.zoom,
+            },
+            data: {
+              label: paletteItem.label,
+              componentType: paletteItem.type,
+              category: paletteItem.category,
+            },
+          };
+          
+          setNodes((nds) => [...nds, newNode]);
+          
+          toast({
+            title: "Component added",
+            description: `${paletteItem.label} added to canvas`,
+          });
+        } catch (err) {
+          console.error("Failed to parse drop data:", err);
+        }
+      }
+    },
+    [reactFlow, setNodes, toast]
+  );
+
+  // =====================
+  // ACTIONS
+  // =====================
+
+  const handleSave = useCallback(() => {
+    const flowData = {
+      nodes,
+      edges,
+      viewport: reactFlow.getViewport(),
+    };
+    localStorage.setItem("realflow-canvas", JSON.stringify(flowData));
+    toast({
+      title: "Canvas saved",
+      description: `${nodes.length} components saved`,
+    });
+  }, [nodes, edges, reactFlow, toast]);
+
+  const handleClear = useCallback(() => {
+    if (nodes.length > 0) {
+      setNodes([]);
+      setEdges([]);
+      clearHistory();
+      toast({
+        title: "Canvas cleared",
+        description: "All components removed",
+      });
+    }
+  }, [nodes.length, setNodes, setEdges, clearHistory, toast]);
+
+  const handleUndo = useCallback(() => {
+    const state = undo();
+    if (state) {
+      toast({ title: "Undo", description: "Previous state restored" });
+    }
+  }, [undo, toast]);
+
+  const handleRedo = useCallback(() => {
+    const state = redo();
+    if (state) {
+      toast({ title: "Redo", description: "Next state restored" });
+    }
+  }, [redo, toast]);
+
+  const handleDelete = useCallback(() => {
+    if (selectedNodeIds.length > 0) {
+      // Delete selected nodes
+      setNodes((nds) => nds.filter((n) => !selectedNodeIds.includes(n.id)));
+      // Delete edges connected to selected nodes
+      setEdges((eds) => eds.filter(
+        (e) => !selectedNodeIds.includes(e.source) && !selectedNodeIds.includes(e.target)
+      ));
+      toast({
+        title: "Deleted",
+        description: `${selectedNodeIds.length} component(s) removed`,
+      });
+      setSelectedNodeIds([]);
+    }
+  }, [selectedNodeIds, setNodes, setEdges, toast]);
+
+  const handleCopy = useCallback(() => {
+    const selectedNodes = nodes.filter((n) => selectedNodeIds.includes(n.id));
+    const selectedEdges = edges.filter(
+      (e) => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
+    );
+    clipboardRef.current = { nodes: selectedNodes, edges: selectedEdges };
+    toast({
+      title: "Copied",
+      description: `${selectedNodes.length} component(s) copied`,
+    });
+  }, [nodes, edges, selectedNodeIds, toast]);
+
+  const handlePaste = useCallback(() => {
+    if (!clipboardRef.current || clipboardRef.current.nodes.length === 0) return;
+    
+    const viewport = reactFlow.getViewport();
+    const offset = 50;
+    
+    const newNodes = clipboardRef.current.nodes.map((node) => ({
+      ...node,
+      id: `${node.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      position: {
+        x: node.position.x + offset,
+        y: node.position.y + offset,
+      },
+      selected: false,
+    }));
+    
+    setNodes((nds) => [...nds, ...newNodes]);
+    toast({
+      title: "Pasted",
+      description: `${newNodes.length} component(s) pasted`,
+    });
+  }, [reactFlow, setNodes, toast]);
+
+  const handleSelectAll = useCallback(() => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+    setSelectedNodeIds(nodes.map((n) => n.id));
+  }, [nodes, setNodes]);
+
+  // =====================
+  // ZOOM CONTROLS
+  // =====================
+
+  const handleZoomIn = useCallback(() => {
+    reactFlow.zoomIn({ duration: 200 });
+  }, [reactFlow]);
+
+  const handleZoomOut = useCallback(() => {
+    reactFlow.zoomOut({ duration: 200 });
+  }, [reactFlow]);
+
+  const handleFitView = useCallback(() => {
+    reactFlow.fitView({ padding: 0.2, duration: 500 });
+  }, [reactFlow]);
+
+  // =====================
+  // KEYBOARD SHORTCUTS
+  // =====================
+
+  useKeyboardShortcuts({
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onDelete: handleDelete,
+    onCopy: handleCopy,
+    onPaste: handlePaste,
+    onSelectAll: handleSelectAll,
+    onSave: handleSave,
+  });
+
+  // =====================
+  // RENDER
+  // =====================
+
   return (
-    <ReactFlowProvider>
-      <div className="h-screen flex bg-background overflow-hidden">
-        {/* Mobile top bar */}
-        <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between p-2 glass-strong border-b border-[var(--border)] md:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* ===================== */}
+      {/* LEFT PANEL - Components */}
+      {/* ===================== */}
+      <div className={`
+        ${isLeftToolbarOpen ? "w-64" : "w-0"} 
+        flex-shrink-0 flex flex-col border-r border-[var(--border)] 
+        bg-[var(--surface)] transition-all duration-200 overflow-hidden
+      `}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-indigo-500 flex items-center justify-center">
               <Blocks className="w-3 h-3 text-white" />
             </div>
-            <span className="font-semibold text-sm">Builder</span>
+            <span className="font-semibold text-sm">Components</span>
           </div>
-          <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsLeftToolbarOpen(!isLeftToolbarOpen)}
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="text-xs text-gray-500 mb-3 px-2">
+            Drag components to canvas
+          </div>
+          <ComponentPalette onDragStart={() => {}} />
+        </div>
+      </div>
+
+      {/* ===================== */}
+      {/* MAIN CANVAS AREA */}
+      {/* ===================== */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Top Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
+          {/* Left Section */}
+          <div className="flex items-center gap-3">
+            {/* Toggle Left Panel */}
+            {!isLeftToolbarOpen && (
+              <button
+                onClick={() => setIsLeftToolbarOpen(true)}
+                className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+            )}
+            
+            {/* Back */}
             <button
-              onClick={() => setAiOpen(!aiOpen)}
+              onClick={() => navigate("/dashboard")}
               className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
             >
-              <Sparkles className="w-4 h-4" />
-            </button>
-            <ThemeToggleDropdown />
-          </div>
-        </div>
-
-        {/* Mobile bottom action bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-30 glass-strong border-t border-[var(--border)] md:hidden safe-area-bottom">
-          <div className="flex items-center justify-around p-2">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-[var(--surface-hover)]"
-            >
-              <Blocks className="w-5 h-5" />
-              <span className="text-xs">Components</span>
-            </button>
-            <button
-              onClick={() => setShowPreview(true)}
-              className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-[var(--surface-hover)]"
-            >
-              <Eye className="w-5 h-5" />
-              <span className="text-xs">Preview</span>
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-[var(--surface-hover)]"
-            >
-              <Save className="w-5 h-5" />
-              <span className="text-xs">Save</span>
-            </button>
-            <button
-              onClick={handleDeployClick}
-              className="flex flex-col items-center gap-1 p-2 rounded-lg bg-[var(--primary)] text-white"
-            >
-              <Rocket className="w-5 h-5" />
-              <span className="text-xs">Deploy</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Sidebar overlay for mobile */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                onClick={() => setSidebarOpen(false)}
-              />
-              <motion.div
-                initial={{ x: -280 }}
-                animate={{ x: 0 }}
-                exit={{ x: -280 }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 h-full w-[280px] sm:w-[320px] glass-strong border-r border-[var(--border)] z-50 md:hidden flex flex-col"
-              >
-                <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => navigate("/dashboard")} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors">
-                      <ArrowLeft className="w-4 h-4" />
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
-                        <Blocks className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="font-semibold">Builder</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setShowTemplates(true)} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]" title="Templates">
-                      <LayoutTemplate className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setShowShareDialog(true)} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]" title="Share">
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Components</span>
-                    <span className="text-xs text-primary">{nodes.length} added</span>
-                  </div>
-                  <ComponentPalette onDragStart={(item) => { draggedItem.current = item; }} />
-                </div>
-                <div className="px-4 py-2 border-t border-border">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      {isSaving ? (
-                        <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
-                      ) : lastSaved ? (
-                        <><Check className="w-3 h-3 text-primary" /> Auto-saved</>
-                      ) : (
-                        <><Save className="w-3 h-3" /> Auto-save on</>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
-                      className={`text-xs ${autoSaveEnabled ? "text-primary" : "text-muted-foreground"} hover:underline`}
-                    >
-                      {autoSaveEnabled ? "On" : "Off"}
-                    </button>
-                  </div>
-                </div>
-          <div className="p-4 border-t border-[var(--border)] space-y-2">
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleSave}>
-                      <Save className="w-3 h-3" /> Save
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => setShowExportDialog(true)}>
-                      <Download className="w-3 h-3" /> Export
-                    </Button>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full gap-1 text-destructive hover:text-destructive"
-                    onClick={handleClear}
-                  >
-                    <Trash2 className="w-3 h-3" /> Clear
-                  </Button>
-                  <Button
-                    className="w-full gap-2"
-                    onClick={handleDeployClick}
-                    disabled={deploying || deployed || connectingWallet}
-                  >
-                    {connectingWallet ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : deploying ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Deploying...
-                      </>
-                    ) : deployed ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Deployed!
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="w-4 h-4" />
-                        Deploy
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Desktop sidebar */}
-        <div className="w-60 border-r border-[var(--border)] flex flex-col glass-strong shrink-0 hidden md:flex h-full">
-          <div className="flex items-center gap-2 p-4 border-b border-[var(--border)]">
-            <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </button>
+            
+            {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center">
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-[var(--primary)] to-indigo-500 flex items-center justify-center">
                 <Blocks className="w-3 h-3 text-white" />
               </div>
               <span className="font-semibold text-sm">Builder</span>
             </div>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Components</span>
-              <span className="text-xs text-primary">{nodes.length} added</span>
-            </div>
-            <ComponentPalette onDragStart={(item) => { draggedItem.current = item; }} />
-          </div>
-          
-          <div className="p-4 border-t border-border space-y-2">
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={handleSave}>
-                <Save className="w-3 h-3" /> Save
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => setShowExportDialog(true)}>
-                <Download className="w-3 h-3" /> Export
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowPreview(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                Preview
-              </button>
-              <button
-                onClick={() => setTestMode(!testMode)}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all ${
-                  testMode
-                    ? "bg-[var(--success-muted)] text-[var(--success)] border border-[var(--success)]/30"
-                    : "border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                <FlaskConical className="w-3.5 h-3.5" />
-                Test Mode
-              </button>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full gap-1 text-destructive hover:text-destructive"
-              onClick={handleClear}
-            >
-              <Trash2 className="w-3 h-3" /> Clear Canvas
-            </Button>
-            <Button
-              className="w-full gap-2"
-              onClick={handleDeployClick}
-              disabled={deploying || deployed || connectingWallet}
-            >
-              {connectingWallet ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : deploying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Deploying...
-                </>
-              ) : deployed ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Deployed!
-                </>
-              ) : (
-                <>
-                  <Rocket className="w-4 h-4" />
-                  Deploy Marketplace
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
 
-        <div className="flex-1 flex relative min-h-0 h-full">
-          {/* Test Mode Panel */}
-          <AnimatePresence>
-            {testMode && (
-              <TestPanel 
-                nodes={nodes} 
-                onClose={() => setTestMode(false)} 
-              />
-            )}
-          </AnimatePresence>
+            <div className="h-5 w-px bg-[var(--border)]" />
 
-          {/* Canvas */}
-          <div className="flex-1 relative min-h-0 h-full pb-16 md:pb-0" ref={reactFlowWrapper} onDragOver={onDragOver} onDrop={onDrop}>
-            <div className="absolute top-4 left-4 z-10 flex gap-2">
+            {/* Undo/Redo */}
             <button
-              onClick={undo}
-              disabled={historyIndex <= 0}
-              className="p-2 glass rounded-lg hover:border-[var(--primary)]/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Undo (Cmd+Z)"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Undo (Ctrl+Z)"
             >
               <Undo2 className="w-4 h-4" />
             </button>
             <button
-              onClick={redo}
-              disabled={historyIndex >= history.length - 1}
-              className="p-2 glass rounded-lg hover:border-[var(--primary)]/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Redo (Cmd+Shift+Z)"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Redo (Ctrl+Shift+Z)"
             >
               <Redo2 className="w-4 h-4" />
             </button>
+
+            <div className="h-5 w-px bg-[var(--border)]" />
+
+            {/* Zoom */}
+            <button
+              onClick={handleZoomOut}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleFitView}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Fit View"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+
+            <div className="h-5 w-px bg-[var(--border)]" />
+
+            {/* Copy/Paste */}
+            <button
+              onClick={handleCopy}
+              disabled={selectedNodeIds.length === 0}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] disabled:opacity-30"
+              title="Copy (Ctrl+C)"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handlePaste}
+              className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)]"
+              title="Paste (Ctrl+V)"
+            >
+              <Clipboard className="w-4 h-4" />
+            </button>
           </div>
 
+          {/* Right Section */}
+          <div className="flex items-center gap-3">
+            {/* Test Mode */}
+            <button
+              onClick={() => setIsTestModeEnabled(!isTestModeEnabled)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
+                isTestModeEnabled 
+                  ? "bg-[var(--primary)]/20 text-[var(--primary)]" 
+                  : "bg-[var(--surface-hover)] text-gray-400"
+              }`}
+            >
+              <FlaskConical className="w-4 h-4" />
+              <span className="text-xs font-medium">Test</span>
+            </button>
+
+            {/* Wallet */}
+            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)]">
+              <Wallet className="w-4 h-4" />
+              <span className="text-xs font-mono">0x1234...5678</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+
+            {/* Toggle Right Panel */}
+            <button
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+              className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* ===================== */}
+        {/* REACT FLOW CANVAS */}
+        {/* ===================== */}
+        <div
+          ref={reactFlowWrapper}
+          className="flex-1 relative"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onConnect={handleConnect}
             nodeTypes={nodeTypes}
-            fitView
-            className="bg-[#0a0b0d]"
-            style={{ height: "100%", width: "100%", backgroundColor: "#0a0b0d" }}
+            edgeTypes={edgeTypes}
+            snapToGrid
+            snapGrid={[16, 16]}
+            defaultEdgeOptions={{
+              type: "bezier",
+              style: { stroke: "#6366f1", strokeWidth: 2 },
+            }}
+            connectionLineStyle={{ stroke: "#6366f1", strokeWidth: 2 }}
+            connectionLineType="bezier"
+            style={{ backgroundColor: "#0e1012" }}
+            minZoom={0.1}
+            maxZoom={4}
+            defaultViewport={{ x: 50, y: 50, zoom: 1 }}
+            fitView={nodes.length === 0}
+            fitViewOptions={{ padding: 0.2 }}
+            zoomOnScroll
+            zoomOnPinch
+            panOnScroll={false}
+            panOnDrag={[1, 2]}
+            selectNodesOnDrag={false}
+            nodesDraggable
+            nodesConnectable
+            elementsSelectable
+            multiSelectionKeyCode="Shift"
+            deleteKeyCode="Delete"
+            proOptions={{ hideAttribution: true }}
           >
-            <Background color="#1a1c1e" gap={24} size={1} />
-            <Controls 
-              style={{
-                backgroundColor: '#111315',
-                borderColor: '#1e293b',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-              }}
-              showInteractive={false}
+            {/* Background Grid */}
+            <Background
+              color="#2a2c2e"
+              gap={20}
+              size={1}
+              style={{ backgroundColor: "#0e1012" }}
             />
-            <MiniMap 
-              style={{
-                backgroundColor: '#111315',
-                borderColor: '#1e293b',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+
+            {/* Mini Map */}
+            <MiniMap
+              className="!bg-[#141517] !border-gray-700/50 !rounded-lg !m-2"
+              nodeColor={(node) => {
+                const colors: Record<string, string> = {
+                  Core: "#3b82f6",
+                  Display: "#a855f7",
+                  Trading: "#f59e0b",
+                  Ownership: "#10b981",
+                  Web3: "#6366f1",
+                  UI: "#f43f5e",
+                };
+                return colors[(node.data?.category as string) || "Core"] || "#6366f1";
               }}
-              nodeColor="#5e6ad2"
-              maskColor="rgba(0, 0, 0, 0.7)"
+              maskColor="rgba(0,0,0,0.6)"
+              pannable
+              zoomable
             />
           </ReactFlow>
 
-          <AnimatePresence>
-            {deployed && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="absolute bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-auto glass rounded-xl px-4 py-3 md:px-6 md:py-4 glow-primary flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4"
-              >
-                {txStatus === "success" ? (
-                  <Check className="w-5 h-5 text-primary shrink-0" />
-                ) : txStatus === "pending" ? (
-                  <Loader2 className="w-5 h-5 text-amber-500 animate-spin shrink-0" />
-                ) : (
-                  <X className="w-5 h-5 text-destructive shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-sm">Marketplace Deployed!</div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      txStatus === "success" ? "bg-primary/10 text-primary" :
-                      txStatus === "pending" ? "bg-amber-500/10 text-amber-500" :
-                      "bg-destructive/10 text-destructive"
-                    }`}>
-                      {txStatus === "pending" ? "Confirming..." : txStatus === "success" ? "Confirmed" : "Failed"}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground font-mono truncate">
-                    {deployAddress.slice(0, 10)}... on Polygon Amoy
-                  </div>
+          {/* Empty State */}
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <div className="text-center p-10 border-2 border-dashed border-gray-700/50 rounded-2xl bg-gray-900/30">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-800 flex items-center justify-center">
+                  <Blocks className="w-8 h-8 text-gray-600" />
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => window.open(`https://amoy.polygonscan.com/address/${deployAddress}`, "_blank")}
-                  >
-                    View on Explorer
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant={verificationStatus === "verified" ? "default" : "outline"}
-                    onClick={verifyContract}
-                    disabled={verificationStatus === "pending"}
-                  >
-                    {verificationStatus === "pending" ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : verificationStatus === "verified" ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      "Verify"
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {showPinningReminder && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="absolute top-16 right-4 z-10 glass rounded-lg px-3 py-2 flex items-center gap-2 max-w-xs hidden lg:flex"
-              >
-                <Pin className="w-4 h-4 text-accent shrink-0" />
-                <div className="flex-1">
-                  <div className="text-xs font-medium">Pin to IPFS</div>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="shrink-0 h-7 text-xs"
-                  onClick={() => window.open("https://app.pinata.cloud/", "_blank")}
-                >
-                  Pin
-                </Button>
-                <button 
-                  onClick={() => setShowPinningReminder(false)}
-                  className="text-muted-foreground hover:text-foreground shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-            <button
-            onClick={() => setAiOpen(!aiOpen)}
-            className="absolute top-4 right-4 z-10 p-2 glass rounded-lg hover:border-[var(--primary)]/40 transition-colors"
-          >
-            {aiOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-          </button>
-
-          {!user.isWalletConnected && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 md:left-auto md:right-4 md:translate-x-0 z-10">
-              <div className="glass rounded-lg px-3 py-2 text-xs md:text-sm flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-amber-500" />
-                <span className="hidden sm:inline">Connect wallet to deploy</span>
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => connectWallet()}>
-                  Connect
-                </Button>
+                <h3 className="text-lg font-medium text-gray-400 mb-2">Start Building</h3>
+                <p className="text-sm text-gray-500">Drag components from the left panel</p>
               </div>
             </div>
           )}
+
+          {/* Status Bar */}
+          <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-xs text-gray-500 bg-[#0e1012]/90 px-3 py-1.5 rounded-lg border border-gray-800">
+            <span>{nodes.length} node{nodes.length !== 1 ? "s" : ""}</span>
+            <span className="text-gray-700">|</span>
+            <span>{edges.length} edge{edges.length !== 1 ? "s" : ""}</span>
+            <span className="text-gray-700">|</span>
+            <span>Scroll to zoom</span>
+            <span className="text-gray-700">|</span>
+            <span>Drag to pan</span>
+          </div>
+
+          {/* Zoom Level */}
+          <div className="absolute bottom-4 right-20 z-10 text-xs text-gray-500 bg-[#0e1012]/90 px-2 py-1 rounded border border-gray-800">
+            {Math.round((reactFlow.getViewport().zoom || 1) * 100)}%
+          </div>
         </div>
+
+        {/* Bottom Bar */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSave}>
+              <Save className="w-4 h-4 mr-1" /> Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClear}>
+              <Trash2 className="w-4 h-4 mr-1" /> Clear
+            </Button>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            disabled={nodes.length === 0}
+            className="bg-gradient-to-r from-[var(--primary)] to-indigo-500"
+          >
+            Deploy Marketplace
+          </Button>
         </div>
-
-        <AnimatePresence>
-          {aiOpen && (
-            <React.Fragment>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/30 z-40 md:hidden"
-                onClick={() => setAiOpen(false)}
-              />
-              <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed right-0 top-0 h-screen w-[320px] md:w-80 lg:w-96 border-l border-[var(--border)] glass-strong overflow-hidden shrink-0 z-50 md:relative md:translate-x-0 md:h-full"
-              >
-              <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] shrink-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCreativeMode(false)}
-                    className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                      !creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                    }`}
-                  >
-                    AI Chat
-                  </button>
-                  <button
-                    onClick={() => setCreativeMode(true)}
-                    className={`text-xs px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${
-                      creativeMode ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                    }`}
-                  >
-                    <Sparkles className="w-3 h-3" /> Creative
-                  </button>
-                </div>
-                <button
-                  onClick={() => setAiOpen(false)}
-                  className="p-1 hover:bg-secondary rounded md:hidden"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {creativeMode ? <CreativeMode /> : <AISidebar />}
-              </div>
-            </motion.div>
-            </React.Fragment>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showExportDialog && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowExportDialog(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="glass-strong rounded-xl max-w-sm w-full p-6 border border-border"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3 className="text-lg font-semibold mb-4">Export Marketplace</h3>
-                <p className="text-sm text-muted-foreground mb-4">Choose an export format:</p>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => handleExport("json")}
-                    className="w-full p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors flex items-center gap-3"
-                  >
-                    <FileJson className="w-5 h-5 text-primary" />
-                    <div className="text-left">
-                      <div className="font-medium">JSON Config</div>
-                      <div className="text-xs text-muted-foreground">Export as React Flow configuration</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleExport("solidity")}
-                    className="w-full p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors flex items-center gap-3"
-                  >
-                    <FileCode className="w-5 h-5 text-accent" />
-                    <div className="text-left">
-                      <div className="font-medium">Solidity Contract</div>
-                      <div className="text-xs text-muted-foreground">Export as deployable smart contract</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowExportDialog(false);
-                      setShowGitHubExport(true);
-                    }}
-                    className="w-full p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors flex items-center gap-3"
-                  >
-                    <Github className="w-5 h-5 text-white" />
-                    <div className="text-left">
-                      <div className="font-medium">GitHub Repository</div>
-                      <div className="text-xs text-muted-foreground">Push to a new GitHub repository</div>
-                    </div>
-                  </button>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full mt-4"
-                  onClick={() => setShowExportDialog(false)}
-                >
-                  Cancel
-                </Button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showGitHubExport && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowGitHubExport(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="glass-strong rounded-xl max-w-md w-full p-6 border border-border"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <Github className="w-6 h-6 text-white" />
-                  <h3 className="text-lg font-semibold">Export to GitHub</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Create a new GitHub repository and push your marketplace code.
-                </p>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">GitHub Username</label>
-                    <input
-                      type="text"
-                      value={githubUsername}
-                      onChange={(e) => setGithubUsername(e.target.value)}
-                      placeholder="your-username"
-                      className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Personal Access Token</label>
-                    <input
-                      type="password"
-                      value={githubPat}
-                      onChange={(e) => setGithubPat(e.target.value)}
-                      placeholder="ghp_xxxxxxxxxxxx"
-                      className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Create a token at GitHub Settings {'->'} Developer settings {'->'} Personal access tokens
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Repository Name</label>
-                    <input
-                      type="text"
-                      value={githubRepo}
-                      onChange={(e) => setGithubRepo(e.target.value)}
-                      placeholder="my-marketplace"
-                      className="w-full p-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setShowGitHubExport(false)}
-                      disabled={exportingToGithub}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={handleGitHubExport}
-                      disabled={exportingToGithub || !githubPat || !githubUsername || !githubRepo}
-                    >
-                      {exportingToGithub ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <Github className="w-4 h-4 mr-2" />
-                          Export
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showDeployConfirm && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowDeployConfirm(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="glass-strong rounded-xl max-w-sm w-full p-6 border border-border"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3 className="text-lg font-semibold mb-2">Deploy Marketplace</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Ready to deploy your marketplace to Polygon Amoy testnet?
-                </p>
-                <div className="bg-secondary rounded-lg p-3 mb-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Components</span>
-                    <span>{nodes.length} blocks</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Network</span>
-                    <span>Polygon Amoy</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Est. Gas</span>
-                    <span>
-                      {estimatingGas ? (
-                        <span className="flex items-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin" /> Estimating...
-                        </span>
-                      ) : gasEstimate ? (
-                        gasEstimate
-                      ) : (
-                        "~0.02 MATIC"
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowDeployConfirm(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    className="flex-1 gap-2"
-                    onClick={handleConfirmDeploy}
-                    disabled={estimatingGas}
-                  >
-                    {estimatingGas ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Estimating...
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="w-4 h-4" />
-                        Deploy
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showPreview && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-              onClick={() => setShowPreview(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-background rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-border flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Eye className="w-5 h-5" />
-                    Marketplace Preview
-                  </h2>
-                  <button
-                    onClick={() => setShowPreview(false)}
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-auto p-6 bg-secondary/30">
-                  <div className="space-y-6 max-w-3xl mx-auto">
-                    <div className="text-center mb-8">
-                      <h1 className="text-3xl font-bold mb-2">RealFlow Marketplace</h1>
-                      <p className="text-muted-foreground">Discover and trade digital assets on Polygon Amoy</p>
-                    </div>
-
-                    {nodes.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <Blocks className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No components added yet. Add components to see preview.</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {nodes.map((node) => {
-                            const type = node.data.componentType as string;
-                            return (
-                              <div key={node.id} className="bg-background rounded-lg p-4 border border-border">
-                                {type === "assetUpload" && (
-                                  <>
-                                    <div className="aspect-video bg-secondary rounded-lg mb-3 flex items-center justify-center">
-                                      <div className="text-center text-muted-foreground">
-                                        <div className="text-4xl mb-2">+</div>
-                                        <div className="text-sm">Drop file here</div>
-                                      </div>
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">Upload digital assets</p>
-                                  </>
-                                )}
-                                {type === "mintButton" && (
-                                  <>
-                                    <div className="flex items-center justify-center h-20 bg-secondary rounded-lg mb-3">
-                                      <span className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium">
-                                        Mint NFT
-                                      </span>
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">Create new tokens</p>
-                                  </>
-                                )}
-                                {type === "listingGrid" && (
-                                  <>
-                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                      {[1, 2, 3, 4].map((i) => (
-                                        <div key={i} className="aspect-square bg-secondary rounded-lg" />
-                                      ))}
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">Browse listings</p>
-                                  </>
-                                )}
-                                {type === "searchBar" && (
-                                  <>
-                                    <div className="h-10 bg-secondary rounded-lg mb-3 flex items-center px-3">
-                                      <span className="text-muted-foreground text-sm">Search assets...</span>
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">Find specific items</p>
-                                  </>
-                                )}
-                                {type === "filterPanel" && (
-                                  <>
-                                    <div className="space-y-2 mb-3">
-                                      <div className="h-4 bg-secondary rounded w-3/4" />
-                                      <div className="h-4 bg-secondary rounded w-1/2" />
-                                      <div className="h-4 bg-secondary rounded w-2/3" />
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">Filter by category</p>
-                                  </>
-                                )}
-                                {type === "userProfile" && (
-                                  <>
-                                    <div className="flex items-center gap-3 mb-3">
-                                      <div className="w-12 h-12 bg-secondary rounded-full" />
-                                      <div>
-                                        <div className="h-4 bg-secondary rounded w-20 mb-1" />
-                                        <div className="h-3 bg-secondary rounded w-16" />
-                                      </div>
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">User info & stats</p>
-                                  </>
-                                )}
-                                {!["assetUpload", "mintButton", "listingGrid", "searchBar", "filterPanel", "userProfile"].includes(type) && (
-                                  <>
-                                    <div className="h-20 bg-secondary rounded-lg mb-3 flex items-center justify-center">
-                                      <Blocks className="w-8 h-8 text-muted-foreground" />
-                                    </div>
-                                    <h3 className="font-medium">{node.data.label}</h3>
-                                    <p className="text-xs text-muted-foreground">{node.data.category}</p>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div className="bg-background rounded-lg p-4 border border-border">
-                          <h3 className="font-medium mb-3">Flow Preview</h3>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {nodes.map((node, idx) => (
-                              <React.Fragment key={node.id}>
-                                <div className="px-3 py-1.5 bg-secondary rounded-lg text-sm">
-                                  {node.data.label}
-                                </div>
-                                {idx < nodes.length - 1 && (
-                                  <span className="text-muted-foreground">→</span>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="p-4 border-t border-border flex justify-between">
-                  <Button variant="outline" onClick={() => setShowPreview(false)}>
-                    Close Preview
-                  </Button>
-                  <Button onClick={() => {
-                    setShowPreview(false);
-                    setShowDeployConfirm(true);
-                  }}>
-                    <Rocket className="w-4 h-4 mr-2" />
-                    Deploy This
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showShareDialog && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowShareDialog(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="glass-strong rounded-xl max-w-md w-full p-6 border border-border"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Share2 className="w-5 h-5" />
-                    Share Marketplace
-                  </h3>
-                  <button onClick={() => setShowShareDialog(false)} className="p-1 hover:bg-secondary rounded">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Shareable Link</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={`${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`}
-                        className="flex-1 p-2 rounded-lg bg-secondary border border-border text-sm"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`);
-                          toast({ title: "Copied!", description: "Link copied to clipboard" });
-                        }}
-                      >
-                        <Link className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-sm font-medium mb-2">Quick Share</p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          const text = `Check out my RealFlow Marketplace with ${nodes.length} components!`;
-                          const url = `${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`;
-                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
-                        }}
-                      >
-                        Share on X
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/builder?config=${btoa(JSON.stringify({ nodes, edges }))}`);
-                          toast({ title: "Copied!", description: "Link copied to clipboard" });
-                        }}
-                      >
-                        Copy Link
-                      </Button>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    Share this link to let others view or import your marketplace design.
-                  </p>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showTemplates && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowTemplates(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-background rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-border flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <LayoutTemplate className="w-5 h-5" />
-                    Marketplace Templates
-                  </h3>
-                  <button onClick={() => setShowTemplates(false)} className="p-1 hover:bg-secondary rounded">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-auto p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={() => {
-                        setNodes([
-                          { id: "1", type: "custom", position: { x: 100, y: 50 }, data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" } },
-                          { id: "2", type: "custom", position: { x: 100, y: 200 }, data: { label: "Mint Button", componentType: "mintButton", category: "Core" } },
-                          { id: "3", type: "custom", position: { x: 100, y: 350 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
-                          { id: "4", type: "custom", position: { x: 400, y: 200 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
-                          { id: "5", type: "custom", position: { x: 400, y: 350 }, data: { label: "Filter Panel", componentType: "filterPanel", category: "UI" } },
-                        ]);
-                        setEdges([
-                          { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                          { id: "e2-3", source: "2", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                        ]);
-                        idCounter.current = 6;
-                        setShowTemplates(false);
-                        toast({ title: "Template loaded!", description: "NFT Marketplace template applied" });
-                      }}
-                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
-                    >
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
-                        <Blocks className="w-6 h-6 text-primary" />
-                      </div>
-                      <h4 className="font-medium mb-1">NFT Marketplace</h4>
-                      <p className="text-xs text-muted-foreground">Basic NFT trading with minting, listing, and search</p>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setNodes([
-                          { id: "1", type: "custom", position: { x: 100, y: 50 }, data: { label: "User Profile", componentType: "userProfile", category: "Core" } },
-                          { id: "2", type: "custom", position: { x: 400, y: 50 }, data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" } },
-                          { id: "3", type: "custom", position: { x: 100, y: 200 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
-                          { id: "4", type: "custom", position: { x: 400, y: 200 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
-                        ]);
-                        setEdges([
-                          { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                        ]);
-                        idCounter.current = 5;
-                        setShowTemplates(false);
-                        toast({ title: "Template loaded!", description: "Creator Portfolio template applied" });
-                      }}
-                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
-                    >
-                      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-3">
-                        <Sparkles className="w-6 h-6 text-accent" />
-                      </div>
-                      <h4 className="font-medium mb-1">Creator Portfolio</h4>
-                      <p className="text-xs text-muted-foreground">Showcase and sell creator works</p>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setNodes([
-                          { id: "1", type: "custom", position: { x: 100, y: 50 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
-                          { id: "2", type: "custom", position: { x: 400, y: 50 }, data: { label: "Filter Panel", componentType: "filterPanel", category: "UI" } },
-                          { id: "3", type: "custom", position: { x: 250, y: 200 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
-                          { id: "4", type: "custom", position: { x: 250, y: 350 }, data: { label: "User Profile", componentType: "userProfile", category: "Core" } },
-                        ]);
-                        setEdges([
-                          { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                          { id: "e2-3", source: "2", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                          { id: "e3-4", source: "3", target: "4", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                        ]);
-                        idCounter.current = 5;
-                        setShowTemplates(false);
-                        toast({ title: "Template loaded!", description: "Digital Gallery template applied" });
-                      }}
-                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
-                    >
-                      <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-3">
-                        <LayoutTemplate className="w-6 h-6" />
-                      </div>
-                      <h4 className="font-medium mb-1">Digital Gallery</h4>
-                      <p className="text-xs text-muted-foreground">Browse and explore digital art collections</p>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setNodes([
-                          { id: "1", type: "custom", position: { x: 250, y: 50 }, data: { label: "Asset Upload", componentType: "assetUpload", category: "Core" } },
-                          { id: "2", type: "custom", position: { x: 100, y: 200 }, data: { label: "Mint Button", componentType: "mintButton", category: "Core" } },
-                          { id: "3", type: "custom", position: { x: 400, y: 200 }, data: { label: "User Profile", componentType: "userProfile", category: "Core" } },
-                          { id: "4", type: "custom", position: { x: 100, y: 350 }, data: { label: "Listing Grid", componentType: "listingGrid", category: "Core" } },
-                          { id: "5", type: "custom", position: { x: 400, y: 350 }, data: { label: "Search Bar", componentType: "searchBar", category: "UI" } },
-                          { id: "6", type: "custom", position: { x: 400, y: 500 }, data: { label: "Filter Panel", componentType: "filterPanel", category: "UI" } },
-                        ]);
-                        setEdges([
-                          { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                          { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                          { id: "e3-5", source: "3", target: "5", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                          { id: "e3-6", source: "3", target: "6", animated: true, style: { stroke: "hsl(175, 80%, 50%)" } },
-                        ]);
-                        idCounter.current = 7;
-                        setShowTemplates(false);
-                        toast({ title: "Template loaded!", description: "Full Platform template applied" });
-                      }}
-                      className="p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/50 transition-colors text-left"
-                    >
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
-                        <Rocket className="w-6 h-6 text-primary" />
-                      </div>
-                      <h4 className="font-medium mb-1">Full Platform</h4>
-                      <p className="text-xs text-muted-foreground">Complete marketplace with all features</p>
-                    </button>
-                  </div>
-                </div>
-                <div className="p-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground text-center">
-                    Templates provide a starting point. Customize freely!
-                  </p>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* ===================== */}
+      {/* RIGHT PANEL - AI/Test */}
+      {/* ===================== */}
+      <div className={`
+        ${isRightPanelOpen ? "w-80" : "w-0"} 
+        flex-shrink-0 flex flex-col border-l border-[var(--border)] 
+        bg-[var(--surface)] transition-all duration-200 overflow-hidden
+      `}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--primary)] to-indigo-500 flex items-center justify-center">
+              {isTestModeEnabled ? (
+                <FlaskConical className="w-3 h-3 text-white" />
+              ) : (
+                <Sparkles className="w-3 h-3 text-white" />
+              )}
+            </div>
+            <span className="font-semibold text-sm">
+              {isTestModeEnabled ? "Test & Preview" : "AI Co-Builder"}
+            </span>
+          </div>
+          <button
+            onClick={() => setIsRightPanelOpen(false)}
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {isTestModeEnabled ? (
+            <div className="p-4">
+              <p className="text-sm text-gray-500">Test mode coming soon...</p>
+            </div>
+          ) : (
+            <AISidebar />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================
+// MAIN EXPORT
+// =====================
+
+/**
+ * Builder component with ReactFlowProvider wrapper
+ * Required for React Flow hooks to work
+ */
+export default function Builder() {
+  return (
+    <ReactFlowProvider>
+      <BuilderCanvas />
     </ReactFlowProvider>
   );
-};
-
-export default Builder;
+}

@@ -125,7 +125,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
               View Details
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/builder">
+              <Link to="/canvas">
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
               </Link>
@@ -147,7 +147,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Link to="/builder" className="block mb-3">
+        <Link to={`/marketplaces/${marketplace.id}`} className="block mb-3">
           <h3 className="font-semibold hover:text-primary transition-colors">{marketplace.name}</h3>
         </Link>
         
@@ -168,7 +168,7 @@ const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces
             {marketplace.createdAt}
           </span>
           <Button variant="outline" size="sm" asChild>
-            <Link to="/builder">Edit</Link>
+            <Link to="/canvas">Edit</Link>
           </Button>
         </div>
       </motion.div>
@@ -256,7 +256,7 @@ const MarketplaceList = () => {
               </Button>
             )}
             <Button size="sm" className="gap-2" asChild>
-              <Link to="/builder">
+              <Link to="/canvas">
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">New</span>
               </Link>
@@ -352,7 +352,7 @@ const MarketplaceList = () => {
                 }
               </p>
               <Button asChild>
-                <Link to="/builder">
+                <Link to="/canvas">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Marketplace
                 </Link>

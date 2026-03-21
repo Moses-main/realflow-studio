@@ -120,7 +120,7 @@ const Index = () => {
               <Button
                 size="lg"
                 className="gap-2 text-base glow-primary"
-                onClick={() => navigate("/builder")}
+                onClick={() => navigate("/canvas")}
               >
                 Start Building
                 <ArrowRight className="w-5 h-5" />

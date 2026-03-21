@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import Landing from "./pages/Landing";
-import Dashboard from "./pages/Dashboard";
 import Builder from "./pages/Builder";
+import Dashboard from "./pages/Dashboard";
 import MarketplaceList from "./pages/MarketplaceList";
 import MarketplaceDetail from "./pages/MarketplaceDetail";
 import Analytics from "./pages/Analytics";
@@ -16,7 +15,8 @@ import { Search } from "lucide-react";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { LanguageProvider } from "@/components/theme/LanguageSwitcher";
-import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import EntryScreen from "./components/EntryScreen";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,7 +38,7 @@ const CommandPalette = ({ open, onClose }: { open: boolean; onClose: () => void 
 
   const commands = [
     { label: "Dashboard", action: () => { navigate("/dashboard"); onClose(); } },
-    { label: "Builder", action: () => { navigate("/builder"); onClose(); } },
+    { label: "Builder", action: () => { navigate("/canvas"); onClose(); } },
     { label: "Marketplaces", action: () => { navigate("/marketplaces"); onClose(); } },
     { label: "Analytics", action: () => { navigate("/analytics"); onClose(); } },
     { label: "Explore", action: () => { navigate("/explore"); onClose(); } },
@@ -117,29 +117,30 @@ const KeyboardShortcutsHandler = () => {
   return <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <LanguageProvider>
-        <Toaster position="bottom-right" theme="dark" />
-        <BrowserRouter>
-          <KeyboardShortcutsHandler />
-          <OnboardingModal />
-          <Routes>
-            <Route path="/" element={<ErrorBoundary><Landing /></ErrorBoundary>} />
-            <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-            <Route path="/builder" element={<ErrorBoundary><Builder /></ErrorBoundary>} />
-            <Route path="/marketplaces" element={<ErrorBoundary><MarketplaceList /></ErrorBoundary>} />
-            <Route path="/marketplaces/:id" element={<ErrorBoundary><MarketplaceDetail /></ErrorBoundary>} />
-            <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
-            <Route path="/explore" element={<ErrorBoundary><Explore /></ErrorBoundary>} />
-            <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </LanguageProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <LanguageProvider>
+          <Toaster position="bottom-right" theme="dark" />
+          <BrowserRouter>
+            <KeyboardShortcutsHandler />
+            <Routes>
+              <Route path="/" element={<Navigate to="/canvas" replace />} />
+              <Route path="/canvas" element={<ErrorBoundary><Builder /></ErrorBoundary>} />
+              <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+              <Route path="/marketplaces" element={<ErrorBoundary><MarketplaceList /></ErrorBoundary>} />
+              <Route path="/marketplaces/:id" element={<ErrorBoundary><MarketplaceDetail /></ErrorBoundary>} />
+              <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
+              <Route path="/explore" element={<ErrorBoundary><Explore /></ErrorBoundary>} />
+              <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </LanguageProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

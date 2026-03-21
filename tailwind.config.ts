@@ -1,121 +1,61 @@
-import type { Config } from "tailwindcss";
-
+/** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
-  prefix: "",
+  darkMode: ['class'],
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
   theme: {
-    container: {
-      center: true,
-      padding: "1.5rem",
-      screens: { "2xl": "1400px" },
-    },
     extend: {
-      fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
-      },
+      // Linear 2026 Dark Mode Palette
       colors: {
-        // Linear-inspired dark mode colors
-        app: {
-          DEFAULT: "#0e1012",
-          dark: "#0a0b0d",
-        },
+        background: '#0e1012', // App/canvas background
         surface: {
-          DEFAULT: "#111315",
-          elevated: "#141517",
-          hover: "#1a1c1e",
-          active: "#1f2124",
+          DEFAULT: '#111315', // Surfaces/cards/nodes/sidebar
+          elevated: '#141517', // Slight elevation for raised elements
+        },
+        primary: '#5e6ad2', // Desaturated blue-indigo (accent, buttons, active states)
+        success: '#10b981', // Muted green
+        warning: '#f59e0b', // Amber
+        text: {
+          primary: '#e5e7eb', // Primary text
+          secondary: '#9ca3af', // Secondary/muted text
         },
         border: {
-          DEFAULT: "#1e293b",
-          subtle: "#1a1f2e",
-          strong: "#334155",
+          DEFAULT: '#1e293b', // Borders/dividers/grid (very thin/subtle)
+          muted: '#334155', // For even thinner dividers if needed
         },
-        // Text colors
-        text: {
-          primary: "#e5e7eb",
-          secondary: "#9ca3af",
-          muted: "#6b7280",
-          disabled: "#4b5563",
+        // Status indicators (keeping for completeness, but we'll use the accent for primary actions)
+        status: {
+          green: '#22c55e',
+          orange: '#f97316',
+          red: '#ef4444',
+          blue: '#3b82f6',
         },
-        // Primary accent (Linear's blue-indigo)
-        primary: {
-          DEFAULT: "#5e6ad2",
-          hover: "#6b77c9",
-          active: "#4f5bb8",
-          muted: "rgba(94, 106, 210, 0.15)",
-          foreground: "#ffffff",
-        },
-        // Status colors
-        success: {
-          DEFAULT: "#10b981",
-          muted: "rgba(16, 185, 129, 0.15)",
-        },
-        warning: {
-          DEFAULT: "#f59e0b",
-          muted: "rgba(245, 158, 11, 0.15)",
-        },
-        error: {
-          DEFAULT: "#ef4444",
-          muted: "rgba(239, 68, 68, 0.15)",
-        },
-        info: {
-          DEFAULT: "#3b82f6",
-          muted: "rgba(59, 130, 246, 0.15)",
-        },
-        // Sidebar
-        sidebar: {
-          bg: "#0e1012",
-          border: "#1a1f2e",
-          hover: "#141517",
-        },
-        // Canvas specific
-        canvas: {
-          bg: "#0a0b0d",
-          dot: "#1a1c1e",
-        },
+      },
+      fontFamily: {
+        // Inter font - 400, 500, 600 weights as specified
+        sans: ['Inter var', 'Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        lg: "8px",
-        md: "6px",
-        sm: "4px",
-        xl: "12px",
-      },
-      fontSize: {
-        "2xs": ["10px", { lineHeight: "14px" }],
-        "xs": ["12px", { lineHeight: "16px" }],
-        "sm": ["13px", { lineHeight: "20px" }],
-        "base": ["14px", { lineHeight: "22px" }],
-        "lg": ["16px", { lineHeight: "24px" }],
-        "xl": ["20px", { lineHeight: "28px" }],
-        "2xl": ["24px", { lineHeight: "32px" }],
-        "3xl": ["28px", { lineHeight: "36px" }],
+        lg: '12px', // As specified
+        md: '8px',
+        sm: '6px',
       },
       spacing: {
-        "18": "4.5rem",
-        "88": "22rem",
+        // Generous whitespace as specified
+        section: '24px',
+        'section-lg': '32px',
       },
-      keyframes: {
-        "slide-in": {
-          "0%": { transform: "translateX(100%)", opacity: "0" },
-          "100%": { transform: "translateX(0)", opacity: "1" },
-        },
-        "fade-in": {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-        "scale-in": {
-          "0%": { transform: "scale(0.95)", opacity: "0" },
-          "100%": { transform: "scale(1)", opacity: "1" },
-        },
+      boxShadow: {
+        // Subtle elevation only - no heavy shadows
+        sm: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       },
-      animation: {
-        "slide-in": "slide-in 0.2s ease-out",
-        "fade-in": "fade-in 0.15s ease-out",
-        "scale-in": "scale-in 0.15s ease-out",
+      transitionDuration: {
+        DEFAULT: '200ms', // As specified for hover animations
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+  plugins: [],
+}
