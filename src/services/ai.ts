@@ -1,16 +1,28 @@
+import { type Node } from "@xyflow/react";
+import { type PaletteItem } from "@/components/builder/paletteData";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const AI_REQUEST_TIMEOUT = 30000; // 30 seconds
+const AI_REQUEST_TIMEOUT = 60000;
 
 export interface AICodeRequest {
   description: string;
-  contractType?: "token" | "marketplace" | "custom";
+  contractType?: "token" | "marketplace" | "auction" | "custom";
   vibeMode?: boolean;
 }
 
 export interface AICodeResponse {
   success: boolean;
   code: string;
+  contractType?: string;
+  components?: AIComponent[];
+  aiPowered?: boolean;
   error?: string;
+}
+
+export interface AIComponent {
+  type: string;
+  name: string;
+  confidence: number;
 }
 
 export interface AIOptimizeRequest {
@@ -18,9 +30,52 @@ export interface AIOptimizeRequest {
   optimizationType?: "gas" | "security" | "readability" | "all";
 }
 
+export interface AIOptimizeResponse {
+  success: boolean;
+  code: string;
+  optimizationType?: string;
+  improvements?: string[];
+  aiPowered?: boolean;
+  error?: string;
+}
+
+export interface AIAnalysisResponse {
+  success: boolean;
+  issues?: string[];
+  suggestions?: string[];
+  securityScore?: number;
+  gasEstimate?: string;
+  lineCount?: number;
+  aiPowered?: boolean;
+  error?: string;
+}
+
+export interface AIChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AIChatResponse {
+  success: boolean;
+  content: string;
+  suggestions?: string[];
+  components?: AIComponent[];
+  aiPowered?: boolean;
+  error?: string;
+}
+
 export interface VibeSuggestion {
   success: boolean;
   suggestion: string;
+}
+
+export interface AICapabilities {
+  codeGeneration: boolean;
+  codeOptimization: boolean;
+  codeAnalysis: boolean;
+  aiChat: boolean;
+  vibeThemes: boolean;
+  components: string[];
 }
 
 function createTimeoutController(timeoutMs: number = AI_REQUEST_TIMEOUT) {
@@ -71,7 +126,7 @@ export async function generateCode(request: AICodeRequest): Promise<AICodeRespon
   }
 }
 
-export async function optimizeCode(request: AIOptimizeRequest): Promise<AICodeResponse> {
+export async function optimizeCode(request: AIOptimizeRequest): Promise<AIOptimizeResponse> {
   const { controller, timeoutId } = createTimeoutController();
   
   try {
@@ -112,6 +167,83 @@ export async function optimizeCode(request: AIOptimizeRequest): Promise<AICodeRe
   }
 }
 
+export async function analyzeCode(code: string): Promise<AIAnalysisResponse> {
+  const { controller, timeoutId } = createTimeoutController();
+  
+  try {
+    const response = await fetch(`${API_URL}/api/ai/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error("AI analyze error:", error);
+    
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return {
+        success: false,
+        issues: ["Analysis timed out"],
+        suggestions: [],
+        securityScore: 0,
+        error: "Request timed out",
+      };
+    }
+    
+    return {
+      success: false,
+      issues: ["Analysis failed"],
+      suggestions: [],
+      securityScore: 0,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function chat(messages: AIChatMessage[], vibeMode: boolean = false): Promise<AIChatResponse> {
+  const { controller, timeoutId } = createTimeoutController();
+  
+  try {
+    const response = await fetch(`${API_URL}/api/ai/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, vibeMode }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error("AI chat error:", error);
+    
+    return {
+      success: false,
+      content: "I'm having trouble responding right now. Try asking about generating contracts, optimizing code, or adding marketplace components!",
+      suggestions: [
+        "Generate a real estate token contract",
+        "Add auction functionality",
+        "Show me marketplace components",
+      ],
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 export async function getVibeSuggestion(theme: string): Promise<VibeSuggestion> {
   const { controller, timeoutId } = createTimeoutController();
   
@@ -141,6 +273,29 @@ export async function getVibeSuggestion(theme: string): Promise<VibeSuggestion> 
     return {
       success: false,
       suggestion: getDefaultVibeSuggestion(theme),
+    };
+  }
+}
+
+export async function getCapabilities(): Promise<{ success: boolean; capabilities?: AICapabilities; aiPowered?: boolean }> {
+  try {
+    const response = await fetch(`${API_URL}/api/ai/capabilities`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("AI capabilities error:", error);
+    return {
+      success: false,
+      capabilities: {
+        codeGeneration: true,
+        codeOptimization: true,
+        codeAnalysis: false,
+        aiChat: false,
+        vibeThemes: true,
+        components: []
+      }
     };
   }
 }

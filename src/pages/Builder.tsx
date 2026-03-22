@@ -908,7 +908,14 @@ function BuilderCanvas() {
               onClose={() => setIsTestModeEnabled(false)} 
             />
           ) : (
-            <AISidebar />
+            <AISidebar 
+              onNodesChange={(newNodes) => {
+                setNodes((nds) => [...nds, ...newNodes]);
+              }}
+              onCodeGenerated={(code) => {
+                console.log("AI generated code:", code);
+              }}
+            />
           )}
         </div>
       </div>
