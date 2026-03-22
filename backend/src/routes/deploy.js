@@ -10,6 +10,27 @@ import { http, createPublicClient, createWalletClient } from 'viem';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Calculate root directory - go up from backend/src/routes to project root
+// This handles both local development and production (Render) environments
+function getRootDir() {
+  // If we're in the backend directory or a subdirectory
+  if (__dirname.includes('/backend/') || __dirname.includes('\\backend\\')) {
+    // Go up from backend/src/routes to project root
+    // backend/src/routes -> backend/src -> backend -> project root (3 levels up from routes)
+    return path.resolve(__dirname, '../../..');
+  }
+  
+  // Check if we're in src directory (another possible structure)
+  if (__dirname.includes('/src/') || __dirname.includes('\\src\\')) {
+    return path.resolve(__dirname, '../..');
+  }
+  
+  // Fallback to current working directory
+  return process.cwd();
+}
+
+const rootDir = getRootDir();
+
 const router = Router();
 
 const deploySchema = z.object({
@@ -83,10 +104,10 @@ router.post('/', async (req, res, next) => {
 
     // REAL DEPLOYMENT LOGIC
     try {
-      const rootDir = path.resolve(__dirname, '../../../');
-      
-       // 1. Load RWATokenizer artifact
-       const tokenizerPath = path.join(rootDir, 'src/out/RWATokenizer.sol/RWATokenizer.json');
+      // 1. Load RWATokenizer artifact
+      console.log(`Root directory: ${rootDir}`);
+      const tokenizerPath = path.join(rootDir, 'src/out/RWATokenizer.sol/RWATokenizer.json');
+      console.log(`Tokenizer path: ${tokenizerPath}`);
       if (!fs.existsSync(tokenizerPath)) {
         throw new Error(`Tokenizer artifact not found at ${tokenizerPath}. Please run 'forge build' in the contracts directory.`);
       }
@@ -166,21 +187,23 @@ router.post('/', async (req, res, next) => {
          transport: http(rpcUrl)
        });
 
-        // 3. Deploy Tokenizer (Implementation)
-        const tokenizerResult = await deployContract(
-          tokenizerArtifact.abi,
-          tokenizerArtifact.bytecode.object,
-          ['https://api.realflow.io/metadata/', owner || account.address]
-        );
+         // 3. Deploy Tokenizer (Implementation)
+         const tokenizerResult = await deployContract(
+           tokenizerArtifact.abi,
+           tokenizerArtifact.bytecode.object,
+           ['https://api.realflow.io/metadata/', owner || account.address],
+           network || 'polygon'
+         );
 
-        console.log(`Tokenizer deployed at: ${tokenizerResult.address}`);
+         console.log(`Tokenizer deployed at: ${tokenizerResult.address}`);
 
-        // 4. Deploy Factory (constructor only needs token implementation address)
-        const factoryResult = await deployContract(
-          factoryArtifact.abi,
-          factoryArtifact.bytecode.object,
-          [tokenizerResult.address]
-        );
+         // 4. Deploy Factory (constructor only needs token implementation address)
+         const factoryResult = await deployContract(
+           factoryArtifact.abi,
+           factoryArtifact.bytecode.object,
+           [tokenizerResult.address],
+           network || 'polygon'
+         );
 
         console.log(`Factory deployed at: ${factoryResult.address}`);
 
@@ -327,17 +350,15 @@ router.post('/', async (req, res, next) => {
 
 router.get('/artifacts', async (req, res, next) => {
   try {
-    const rootDir = path.resolve(__dirname, '../../../');
-    
     // 1. Load RWATokenizer artifact
-    const tokenizerPath = path.join(rootDir, 'contracts/out/RWATokenizer.sol/RWATokenizer.json');
+    const tokenizerPath = path.join(rootDir, 'src/out/RWATokenizer.sol/RWATokenizer.json');
     if (!fs.existsSync(tokenizerPath)) {
       return res.status(404).json({ success: false, error: 'Tokenizer artifact not found' });
     }
     const tokenizerArtifact = JSON.parse(fs.readFileSync(tokenizerPath, 'utf8'));
 
     // 2. Load MarketplaceFactory artifact
-    const factoryPath = path.join(rootDir, 'contracts/out/MarketplaceFactory.sol/MarketplaceFactory.json');
+    const factoryPath = path.join(rootDir, 'src/out/MarketplaceFactory.sol/MarketplaceFactory.json');
     if (!fs.existsSync(factoryPath)) {
       return res.status(404).json({ success: false, error: 'Factory artifact not found' });
     }

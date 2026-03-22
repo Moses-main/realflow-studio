@@ -6,7 +6,7 @@ import {
   parseEther 
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { polygon, sepolia, mainnet } from 'viem/chains';
+import { polygon, sepolia, mainnet, avalanche } from 'viem/chains';
 
 const polygonAmoy = {
   id: 80002,
@@ -26,12 +26,32 @@ const polygonAmoy = {
   testnet: true,
 };
 
+const avalancheFuji = {
+  id: 43113,
+  name: 'Avalanche Fuji',
+  network: 'avalanche-fuji',
+  nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] },
+    public: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] },
+  },
+  blockExplorers: {
+    default: { 
+      name: 'SnowTrace', 
+      url: 'https://testnet.snowtrace.io' 
+    },
+  },
+  testnet: true,
+};
+
 const CHAINS = {
   'polygon-amoy': polygonAmoy,
   'polygon-mumbai': polygonAmoy,
   'polygon-mainnet': polygon,
   'sepolia': sepolia,
-  'mainnet': mainnet
+  'mainnet': mainnet,
+  'avalanche': avalancheFuji,
+  'avalanche-fuji': avalancheFuji,
 };
 
 const RPC_URLS = {
@@ -39,7 +59,9 @@ const RPC_URLS = {
   'polygon-mumbai': process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/',
   'polygon-mainnet': process.env.POLYGON_MAINNET_RPC_URL,
   'sepolia': process.env.SEPOLIA_RPC_URL,
-  'mainnet': process.env.MAINNET_RPC_URL
+  'mainnet': process.env.MAINNET_RPC_URL,
+  'avalanche': process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc',
+  'avalanche-fuji': process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc',
 };
 
 function getChain(network) {

@@ -12,6 +12,7 @@ const MOCK_MARKETPLACES = [
     name: "Lagos Real Estate Hub", 
     status: "live", 
     category: "real-estate",
+    network: "polygon",
     assets: 24, 
     volume: "142000",
     volumeFormatted: "$142K",
@@ -23,6 +24,7 @@ const MOCK_MARKETPLACES = [
     name: "Buenos Aires Art Market", 
     status: "draft", 
     category: "art",
+    network: "polygon",
     assets: 8, 
     volume: "0",
     volumeFormatted: "$0",
@@ -34,11 +36,26 @@ const MOCK_MARKETPLACES = [
     name: "Mexico Commodity Exchange", 
     status: "live", 
     category: "commodities",
+    network: "polygon",
     assets: 56, 
     volume: "890000",
     volumeFormatted: "$890K",
     address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
     createdAt: "2024-03-10T00:00:00Z"
+  },
+  { 
+    id: "4", 
+    name: "Real Estate RWA Marketplace", 
+    status: "live", 
+    category: "real-estate",
+    network: "avalanche",
+    assets: 0, 
+    volume: "0",
+    volumeFormatted: "$0",
+    description: "Fractional real estate ownership marketplace on Avalanche",
+    address: "0x06Cebc9403C00d972e014E452509d04c7C350880",
+    explorerUrl: "https://testnet.snowtrace.io/address/0x06Cebc9403C00d972e014E452509d04c7C350880",
+    createdAt: "2026-03-22T00:00:00Z"
   },
 ];
 
