@@ -321,3 +321,6 @@ export function useAI(options: UseAIOptions = {}) {
     addAllComponentsToCanvas,
   };
 }
+
+// Alias for backwards compatibility
+export const useAIChat = useAI;

@@ -123,7 +123,7 @@ const AISidebar = ({ onNodesChange, onCodeGenerated }: AISidebarProps) => {
     sendMessage,
     clearMessages,
     addAllComponentsToCanvas,
-  } = useAIChat({
+  } = useAI({
     vibeMode: true,
     onCodeGenerated,
   });
