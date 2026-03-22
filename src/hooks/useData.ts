@@ -8,12 +8,14 @@ export interface Marketplace {
   name: string;
   status: "live" | "draft" | "paused";
   category: string;
+  network?: "polygon" | "avalanche";
   assets: number;
   volume: string;
   volumeFormatted: string;
   address: string;
   createdAt: string;
   description?: string;
+  explorerUrl?: string;
 }
 
 export interface Template {
@@ -108,6 +110,27 @@ export function useMarketplaces(params?: { status?: string; category?: string; s
     try {
       let marketplaces = contractMarketplaces || [];
       
+      // If blockchain returns no marketplaces, fall back to API for demo data
+      if (marketplaces.length === 0) {
+        console.log("No blockchain marketplaces found, fetching from API...");
+        try {
+          const queryParams = new URLSearchParams();
+          if (params?.status && params.status !== 'all') queryParams.set("status", params.status);
+          if (params?.category && params.category !== 'all') queryParams.set("category", params.category);
+          if (params?.search) queryParams.set("search", params.search);
+
+          const query = queryParams.toString();
+          const response = await fetch(`${API_URL}/api/marketplaces${query ? `?${query}` : ''}`);
+          
+          if (response.ok) {
+            const result = await response.json();
+            marketplaces = result.data || [];
+          }
+        } catch (apiErr) {
+          console.error("API fallback failed:", apiErr);
+        }
+      }
+      
       // Apply filters
       if (params?.status && params.status !== 'all') {
         marketplaces = marketplaces.filter(m => m.status === params.status);
@@ -132,8 +155,8 @@ export function useMarketplaces(params?: { status?: string; category?: string; s
       // Fallback to API if blockchain data fails
       try {
         const queryParams = new URLSearchParams();
-        if (params?.status) queryParams.set("status", params.status);
-        if (params?.category) queryParams.set("category", params.category);
+        if (params?.status && params.status !== 'all') queryParams.set("status", params.status);
+        if (params?.category && params.category !== 'all') queryParams.set("category", params.category);
         if (params?.search) queryParams.set("search", params.search);
 
         const query = queryParams.toString();

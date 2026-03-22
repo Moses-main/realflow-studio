@@ -17,7 +17,8 @@ import {
   Loader
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAIChat, type AIMessage, type AIComponent } from "@/hooks/useAIChat";
+import { useAI, type AIMessage } from "@/hooks/useAIChat";
+import type { AIComponent } from "@/services/ai";
 import { paletteItems } from "@/components/builder/paletteData";
 
 interface AISidebarProps {
