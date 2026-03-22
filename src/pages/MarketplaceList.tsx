@@ -217,22 +217,7 @@ const MarketplaceList = () => {
         </Dialog>
       </>
     );
-  };
-
-const MarketplaceList = () => {
-  const { user } = useAuth();
-  const [filter, setFilter] = useState<"all" | "live" | "draft">("all");
-  const [category, setCategory] = useState("all");
-  const [search, setSearch] = useState("");
-
-  const filteredMarketplaces = mockMarketplaces.filter(m => {
-    const matchesFilter = filter === "all" || m.status === filter;
-    const matchesCategory = category === "all" || m.category === category;
-    const matchesSearch = search === "" || 
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.address.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesCategory && matchesSearch;
-  });
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,7 +262,7 @@ const MarketplaceList = () => {
                 >
                   {f === "all" ? "All" : f === "live" ? "Live" : "Draft"}
                   <span className="ml-2 text-xs opacity-70">
-                    ({f === "all" ? mockMarketplaces.length : mockMarketplaces.filter(m => m.status === f).length})
+                    ({f === "all" ? marketplaces.length : marketplaces.filter(m => m.status === f).length})
                   </span>
                 </Button>
               ))}
@@ -307,24 +292,47 @@ const MarketplaceList = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="glass rounded-xl p-4">
               <p className="text-sm text-muted-foreground mb-1">Total</p>
-              <p className="text-2xl font-bold">{mockMarketplaces.length}</p>
+              <p className="text-2xl font-bold">{marketplaces.length}</p>
             </div>
             <div className="glass rounded-xl p-4">
               <p className="text-sm text-muted-foreground mb-1">Live</p>
-              <p className="text-2xl font-bold text-primary">{mockMarketplaces.filter(m => m.status === "live").length}</p>
+              <p className="text-2xl font-bold text-primary">{marketplaces.filter(m => m.status === "live").length}</p>
             </div>
             <div className="glass rounded-xl p-4">
               <p className="text-sm text-muted-foreground mb-1">Total Assets</p>
-              <p className="text-2xl font-bold">{mockMarketplaces.reduce((acc, m) => acc + m.assets, 0)}</p>
+              <p className="text-2xl font-bold">{marketplaces.reduce((acc, m) => acc + m.assets, 0)}</p>
             </div>
             <div className="glass rounded-xl p-4">
               <p className="text-sm text-muted-foreground mb-1">Volume</p>
-              <p className="text-2xl font-bold">$1.03M</p>
+              <p className="text-2xl font-bold">
+                ${marketplaces.reduce((acc, m) => acc + parseFloat(m.volume.replace(/[$,M]/g, '') || 0), 0).toFixed(2)}M
+              </p>
             </div>
           </div>
 
-          {/* Marketplaces Grid */}
-          {filteredMarketplaces.length > 0 ? (
+          {/* Loading State */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex space-x-3">
+                <div className="w-8 h-8 border-2 border-primary rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-2 border-primary rounded-full animate-spin" style={{ animationDelay: '200ms' }}></div>
+                <div className="w-8 h-8 border-2 border-primary rounded-full animate-spin" style={{ animationDelay: '400ms' }}></div>
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground">Loading marketplaces...</p>
+            </div>
+          ) : error ? (
+            <div className="glass rounded-xl p-12 text-center">
+              <div className="text-destructive">
+                <Package className="w-6 h-6 mx-auto mb-3" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Error loading marketplaces</h3>
+              <p className="text-sm text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          ) : filteredMarketplaces.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredMarketplaces.map((marketplace) => (
                 <MarketplaceCard key={marketplace.id} marketplace={marketplace} />
