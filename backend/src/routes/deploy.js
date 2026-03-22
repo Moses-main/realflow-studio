@@ -31,11 +31,12 @@ const deploySchema = z.object({
   components: z.array(z.string()).optional(),
   owner: z.string().optional(),
   name: z.string().optional().default("RealFlow Marketplace"),
+  network: z.enum(['polygon', 'avalanche']).optional().default('polygon'),
 });
 
 router.post('/', async (req, res, next) => {
   try {
-     const { nodes, edges, components, owner, name } = deploySchema.parse(req.body);
+     const { nodes, edges, components, owner, name, network } = deploySchema.parse(req.body);
 
     const nodeTypes = [...new Set(nodes.map((n) => n.data?.componentType))];
     const hasMint = nodeTypes.includes('mintButton');
@@ -44,7 +45,9 @@ router.post('/', async (req, res, next) => {
     const hasUpload = nodeTypes.includes('assetUpload');
 
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
-    const existingContractAddress = process.env.MARKETPLACE_CONTRACT_ADDRESS;
+    const existingContractAddress = network === 'avalanche' 
+      ? process.env.AVALANCHE_CONTRACT_ADDRESS 
+      : process.env.MARKETPLACE_CONTRACT_ADDRESS;
 
     if (!privateKey) {
       return res.status(500).json({
@@ -99,27 +102,58 @@ router.post('/', async (req, res, next) => {
        const formattedPrivateKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
        const account = privateKeyToAccount(formattedPrivateKey);
 
-       console.log(`Deploying marketplace system with account: ${account.address}`);
+       console.log(`Deploying marketplace system with account: ${account.address} on ${network || 'polygon'}`);
 
-       // Define chain and rpcUrl for Polygon Amoy
-       const chain = {
-         id: 80002,
-         name: 'Polygon Amoy',
-         network: 'polygon-amoy',
-         nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-         rpcUrls: {
-           default: { http: [process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/'] },
-           public: { http: [process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/'] },
-         },
-         blockExplorers: {
-           default: { 
-             name: 'PolygonScan', 
-             url: 'https://amoy.polygonscan.com' 
+       // Define chain configurations for supported networks
+       const networks = {
+         polygon: {
+           chain: {
+             id: 80002,
+             name: 'Polygon Amoy',
+             network: 'polygon-amoy',
+             nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+             rpcUrls: {
+               default: { http: [process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/'] },
+               public: { http: [process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/'] },
+             },
+             blockExplorers: {
+               default: { 
+                 name: 'PolygonScan', 
+                 url: 'https://amoy.polygonscan.com' 
+               },
+             },
+             testnet: true,
            },
+           rpcUrl: process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/',
+           explorerName: 'Polygonscan',
+           explorerBaseUrl: 'https://amoy.polygonscan.com',
          },
-         testnet: true,
+         avalanche: {
+           chain: {
+             id: 43113,
+             name: 'Avalanche Fuji',
+             network: 'avalanche-fuji',
+             nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+             rpcUrls: {
+               default: { http: [process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc'] },
+               public: { http: [process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc'] },
+             },
+             blockExplorers: {
+               default: { 
+                 name: 'SnowTrace', 
+                 url: 'https://testnet.snowtrace.io' 
+               },
+             },
+             testnet: true,
+           },
+           rpcUrl: process.env.AVALANCHE_FUJI_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc',
+           explorerName: 'SnowTrace',
+           explorerBaseUrl: 'https://testnet.snowtrace.io',
+         },
        };
-       const rpcUrl = process.env.POLYGON_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology/';
+
+       const selectedNetwork = networks[network || 'polygon'];
+       const { chain, rpcUrl, explorerName, explorerBaseUrl } = selectedNetwork;
 
        const publicClient = createPublicClient({
          chain,
@@ -211,50 +245,63 @@ router.post('/', async (req, res, next) => {
 
         return {
           success: true,
-          address: marketplaceAddress || factoryResult.address, // Fallback to factory address if needed
+          address: marketplaceAddress || factoryResult.address,
           transactionHash: createMarketplaceHash,
           tokenizerAddress: tokenizerResult.address,
           factoryAddress: factoryResult.address,
           type: 'real',
-          message: 'Deployment successful! Marketplace deployed to Polygon Amoy.',
-          explorerUrl: `${chain.blockExplorers.default.url}/tx/${createMarketplaceHash}`,
+          network: network || 'polygon',
+          message: `Deployment successful! Marketplace deployed to ${chain.name}.`,
+          explorerUrl: `${explorerBaseUrl}/tx/${createMarketplaceHash}`,
+          explorerBaseUrl: explorerBaseUrl,
+          explorerName: explorerName,
           status: createMarketplaceReceipt.status
         };
 
-     // Prepare response data
-     const responseData = {
-       success: true,
-       address: factoryResult.address,
-       transactionHash: factoryResult.transactionHash,
-       tokenizerAddress: tokenizerResult.address,
-       type: 'real',
-       message: 'Deployment successful! Marketplace Factory deployed to Polygon Amoy.',
-       explorerUrl: factoryResult.explorerUrl,
-       config: deployData,
-       name: name || "RealFlow Marketplace",
-     };
+      // Prepare response data
+      const responseData = {
+        success: true,
+        address: factoryResult.address,
+        transactionHash: factoryResult.transactionHash,
+        tokenizerAddress: tokenizerResult.address,
+        type: 'real',
+        network: network || 'polygon',
+        message: `Deployment successful! Marketplace Factory deployed to ${chain.name}.`,
+        explorerUrl: factoryResult.explorerUrl,
+        explorerBaseUrl: explorerBaseUrl,
+        explorerName: explorerName,
+        config: deployData,
+        name: name || "RealFlow Marketplace",
+      };
 
      // Attempt contract verification if API key is available
-     if (process.env.POLYGONSCAN_API_KEY) {
-       try {
-         const verificationResponse = await fetch(
-           `https://api.polygonscan.com/api?module=contract&action=verifysourcecode&address=${factoryResult.address}&apikey=${process.env.POLYGONSCAN_API_KEY}`
-         );
-         const verificationData = await verificationResponse.json();
-         
-         if (verificationData.status === '1' && verificationData.message.includes('Pass')) {
-           responseData.verified = true;
-           responseData.verificationMessage = 'Contract source code verified on Polygonscan';
-         } else {
-           responseData.verified = false;
-           responseData.verificationMessage = verificationData.result || 'Verification submitted, pending...';
-         }
-       } catch (verificationError) {
-         console.log('Verification attempt failed:', verificationError);
-         responseData.verified = false;
-         responseData.verificationMessage = 'Verification could not be completed automatically';
-       }
-     }
+      const verificationApiKey = network === 'avalanche' 
+        ? process.env.SNOWTRACE_API_KEY 
+        : process.env.POLYGONSCAN_API_KEY;
+      const verificationApiBase = network === 'avalanche'
+        ? 'https://api-testnet.snowtrace.io/api'
+        : 'https://api.polygonscan.com/api';
+      
+      if (verificationApiKey) {
+        try {
+          const verificationResponse = await fetch(
+            `${verificationApiBase}?module=contract&action=verifysourcecode&address=${factoryResult.address}&apikey=${verificationApiKey}`
+          );
+          const verificationData = await verificationResponse.json();
+          
+          if (verificationData.status === '1' && verificationData.message.includes('Pass')) {
+            responseData.verified = true;
+            responseData.verificationMessage = `Contract source code verified on ${explorerName}`;
+          } else {
+            responseData.verified = false;
+            responseData.verificationMessage = verificationData.result || 'Verification submitted, pending...';
+          }
+        } catch (verificationError) {
+          console.log('Verification attempt failed:', verificationError);
+          responseData.verified = false;
+          responseData.verificationMessage = 'Verification could not be completed automatically';
+        }
+      }
 
      res.json(responseData);
 

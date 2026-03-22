@@ -40,7 +40,8 @@ import {
   Clipboard, 
   ChevronDown,
   Loader2,
-  MapPin
+  MapPin,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ import { useMobileOptimization, useResponsiveMinimap } from "@/hooks/useMobileOp
 import { useAuth } from "@/hooks/useAuth";
 import { useWallets } from "@privy-io/react-auth";
 import { createWalletClient, custom, http, createPublicClient } from "viem";
+import { setActiveNetwork } from "@/services/contracts";
 
 const polygonAmoy = {
   id: 80002,
@@ -120,6 +122,8 @@ function BuilderCanvas() {
   const [isLeftToolbarOpen, setIsLeftToolbarOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedNetwork, setSelectedNetwork] = useState<'polygon' | 'avalanche'>('polygon');
+  const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
   
   // Clipboard for copy/paste
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
@@ -431,6 +435,15 @@ function BuilderCanvas() {
     setSelectedNodeIds(nodes.map((n) => n.id));
   }, [nodes, setNodes]);
 
+  const handleNetworkSwitch = useCallback((network: 'polygon' | 'avalanche') => {
+    setSelectedNetwork(network);
+    setActiveNetwork(network);
+    setShowNetworkDropdown(false);
+    toast.success(`Switched to ${network === 'polygon' ? 'Polygon Amoy' : 'Avalanche Fuji'}`, {
+      description: `Deployments will now go to ${network === 'polygon' ? 'Polygon Amoy testnet' : 'Avalanche Fuji testnet'}`,
+    });
+  }, [toast]);
+
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentStatus, setDeploymentStatus] = useState<string | null>(null);
 
@@ -471,17 +484,18 @@ function BuilderCanvas() {
       setIsDeploying(true);
       setDeploymentStatus("Initializing backend deployment...");
 
-       try {
-         // Prompt user for marketplace name
-         const marketplaceName = prompt("Enter a name for your marketplace:", "RealFlow Marketplace");
-         
-         const flowData = {
-           nodes,
-           edges,
-           components: nodeTypes,
-           owner: wallets[0]?.address,
-           name: marketplaceName || "RealFlow Marketplace"
-         };
+        try {
+          // Prompt user for marketplace name
+          const marketplaceName = prompt("Enter a name for your marketplace:", "RealFlow Marketplace");
+          
+          const flowData = {
+            nodes,
+            edges,
+            components: nodeTypes,
+            owner: wallets[0]?.address,
+            name: marketplaceName || "RealFlow Marketplace",
+            network: selectedNetwork
+          };
 
        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
          method: "POST",
@@ -624,19 +638,52 @@ function BuilderCanvas() {
             </div>
             
             {/* Network Selector */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative">
               <button
-                onClick={() => {
-                  // Import and use ContractService here would require refactoring
-                  // For now, we'll show a toast indicating the feature
-                  toast.info("Network switching: Would toggle between Polygon Amoy and Avalanche Fuji");
-                }}
+                onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-[var(--surface-hover)] transition-colors"
               >
-                <MapPin className="w-4 h-4" />
-                <span className="text-xs font-medium">Polygon Amoy</span>
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="text-xs font-medium">
+                  {selectedNetwork === 'polygon' ? 'Polygon Amoy' : 'Avalanche Fuji'}
+                </span>
                 <ChevronDown className="w-3 h-3" />
               </button>
+              
+              {showNetworkDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-48 bg-[var(--surface)] border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    onClick={() => handleNetworkSwitch('polygon')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--surface-hover)] transition-colors ${
+                      selectedNetwork === 'polygon' ? 'bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-xs font-medium">Polygon Amoy</span>
+                      <span className="text-[10px] text-muted-foreground">MATIC</span>
+                    </div>
+                    {selectedNetwork === 'polygon' && (
+                      <Check className="w-4 h-4 ml-auto text-primary" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleNetworkSwitch('avalanche')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--surface-hover)] transition-colors ${
+                      selectedNetwork === 'avalanche' ? 'bg-primary/10 text-primary' : ''
+                    }`}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-xs font-medium">Avalanche Fuji</span>
+                      <span className="text-[10px] text-muted-foreground">AVAX</span>
+                    </div>
+                    {selectedNetwork === 'avalanche' && (
+                      <Check className="w-4 h-4 ml-auto text-primary" />
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="h-5 w-px bg-[var(--border)]" />
