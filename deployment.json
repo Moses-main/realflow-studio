@@ -1,22 +1,22 @@
 {
-  "network": "avalanche",
-  "chainId": 43113,
-  "chainName": "Avalanche Fuji",
-  "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
-  "explorerBaseUrl": "https://testnet.snowtrace.io",
+  "network": "polygon",
+  "chainId": 80002,
+  "chainName": "Polygon Amoy",
+  "rpcUrl": "https://rpc-amoy.polygon.technology/",
+  "explorerBaseUrl": "https://amoy.polygonscan.com",
   "deployer": "0xe81e8078f2D284C92D6d97B5d4769af81e0cA11C",
   "contracts": {
-    "RWATokenizer": "0xc880af5d5ac3ea27c26c47d132661a710c245ea5",
-    "MarketplaceFactory": "0x62f0be8a94f7e348f15f6f373e35ae5c34f7d40f",
-    "Marketplace": "0x06Cebc9403C00d972e014E452509d04c7C350880"
+    "RWATokenizer": "0x6ead743c9122a6c47212e4808edd49e260c1172b",
+    "MarketplaceFactory": "0x895605cfacb5f0d9de464dce03b81df73bd3783c",
+    "Marketplace": "0x32176423853891a310A874132185C02EF90A03ce"
   },
   "marketplace": {
     "name": "Real Estate RWA Marketplace",
     "description": "Fractional real estate ownership marketplace",
-    "createdAt": "2026-03-22T05:27:23.499Z"
+    "createdAt": "2026-03-22T05:30:40.919Z"
   },
   "transactionHashes": {
-    "tokenizer": "0xad852f5e41e41da1cf1641c3284bacff4d554ced8eaf2dddd02c1ece56a1a8fd",
-    "factory": "0xb089775c98ed0f3e52dd6debb98bcde30347a8fcab37625d2fec1d468fab5eb5"
+    "tokenizer": "0x9047c4be0ca943d0aa53fa0b8b366bb033dc0e0efb3e99a0c8c56a693b91fffb",
+    "factory": "0x1a6f18333170dc32ac52e54c9cada88f238a7a365b787fb496192359e9c672ff"
   }
 }

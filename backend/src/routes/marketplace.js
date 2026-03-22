@@ -57,6 +57,20 @@ const MOCK_MARKETPLACES = [
     explorerUrl: "https://testnet.snowtrace.io/address/0x06Cebc9403C00d972e014E452509d04c7C350880",
     createdAt: "2026-03-22T00:00:00Z"
   },
+  { 
+    id: "5", 
+    name: "Polygon Real Estate Hub", 
+    status: "live", 
+    category: "real-estate",
+    network: "polygon",
+    assets: 0, 
+    volume: "0",
+    volumeFormatted: "$0",
+    description: "Fractional real estate ownership marketplace on Polygon",
+    address: "0x32176423853891a310A874132185C02EF90A03ce",
+    explorerUrl: "https://amoy.polygonscan.com/address/0x32176423853891a310A874132185C02EF90A03ce",
+    createdAt: "2026-03-22T06:00:00Z"
+  },
 ];
 
 const marketplaceSchema = z.object({
