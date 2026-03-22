@@ -16,7 +16,7 @@
 RealFlow Studio enables non-technical users (real estate agents, artists, entrepreneurs) to create and launch custom marketplaces for tokenized RWAs like real estate, art, and commodities. Users can:
 - Drag-and-drop to design marketplace UI
 - Tokenize assets with AI-generated smart contracts
-- Deploy to Polygon in minutes
+- Deploy to multiple EVM chains (Polygon Amoy and Avalanche Fuji testnets)
 
 ## 🏗️ Architecture
 
@@ -144,7 +144,7 @@ graph LR
 - **Frontend**: React, TypeScript, Vite, TailwindCSS, React Flow
 - **Backend**: Express.js, Node.js
 - **Smart Contracts**: Solidity, OpenZeppelin, Foundry
-- **Blockchain**: Polygon Amoy (chain ID: 80002)
+- **Blockchain**: Multi-chain support (Polygon Amoy chain ID: 80002, Avalanche Fuji chain ID: 43113)
 - **AI**: OpenAI GPT-4
 - **Storage**: IPFS via Pinata
 
@@ -269,8 +269,12 @@ PINATA_API_SECRET=your_pinata_api_secret
 
 # Blockchain
 DEPLOYER_PRIVATE_KEY=your_deployer_private_key
+# Polygon Amoy Testnet
 POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
 MARKETPLACE_FACTORY_ADDRESS=0x802A6843516f52144b3F1D04E5447A085d34aF37
+# Avalanche Fuji Testnet
+AVALANCHE_FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
+AVALANCHE_FACTORY_ADDRESS=0xYourAvalancheFactoryAddress
 
 # Security
 CORS_ORIGIN=http://localhost:5173
@@ -438,11 +442,17 @@ railway up
 
 ### Smart Contract Deployment
 ```bash
-# Deploy to testnet
+# Deploy to Polygon Amoy testnet
 forge script script/Deploy.s.sol --rpc-url polygonAmoy --private-key $PRIVATE_KEY --broadcast
+
+# Deploy to Avalanche Fuji testnet
+forge script script/Deploy.s.sol --rpc-url avalancheFuji --private-key $PRIVATE_KEY --broadcast
 
 # Verify on PolygonScan
 forge verify-contract <address> "src/RWATokenizer.sol:RWATokenizer" --chain-id 80002 --verifier-url https://api-amoy.polygonscan.com/api
+
+# Verify on SnowTrace (Avalanche)
+forge verify-contract <address> "src/RWATokenizer.sol:RWATokenizer" --chain-id 43113 --verifier-url https://testnet.snowtrace.io/api
 ```
 
 ## 🤝 Contributing

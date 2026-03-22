@@ -39,7 +39,8 @@ import {
   Copy, 
   Clipboard, 
   ChevronDown,
-  Loader2
+  Loader2,
+  MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -65,6 +66,21 @@ const polygonAmoy = {
   },
   blockExplorers: {
     default: { name: 'PolygonScan', url: 'https://amoy.polygonscan.com' },
+  },
+  testnet: true,
+};
+
+// Define Avalanche Fuji Testnet chain
+const avalancheFuji = {
+  id: 43113,
+  name: 'Avalanche Fuji Testnet',
+  nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] },
+    public: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] },
+  },
+  blockExplorers: {
+    default: { name: 'SnowTrace', url: 'https://testnet.snowtrace.io' },
   },
   testnet: true,
 };
@@ -418,89 +434,93 @@ function BuilderCanvas() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentStatus, setDeploymentStatus] = useState<string | null>(null);
 
-  const handleDeploy = useCallback(async () => {
-    console.log("handleDeploy triggered", { authenticated, hasWallet, nodesCount: nodes.length });
-    
-    if (!authenticated || !hasWallet) {
-      console.log("Showing wallet connection toast");
-      toast("Wallet Required", {
-        description: "You must connect a blockchain wallet before deploying your marketplace.",
-        action: {
-          label: "Connect Wallet",
-          onClick: () => loginWithWallet()
-        },
-      });
-      return;
-    }
+    const handleDeploy = useCallback(async () => {
+     console.log("handleDeploy triggered", { authenticated, hasWallet, nodesCount: nodes.length });
+     
+     if (!authenticated || !hasWallet) {
+       console.log("Showing wallet connection toast");
+       toast("Wallet Required", {
+         description: "You must connect a blockchain wallet before deploying your marketplace.",
+         action: {
+           label: "Connect Wallet",
+           onClick: () => loginWithWallet()
+         },
+       });
+       return;
+     }
 
-    if (nodes.length === 0) {
-      toast.error("Cannot deploy", {
-        description: "Add components to the canvas first",
-      });
-      return;
-    }
+     if (nodes.length === 0) {
+       toast.error("Cannot deploy", {
+         description: "Add components to the canvas first",
+       });
+       return;
+     }
 
-    const nodeTypes = [...new Set(nodes.map((n) => n.data?.componentType))];
-    const hasRequiredComponents = nodeTypes.some(
-      (type) => ["mintButton", "listingGrid", "buyButton"].includes(type)
-    );
+     const nodeTypes = [...new Set(nodes.map((n) => n.data?.componentType))];
+     const hasRequiredComponents = nodeTypes.some(
+       (type) => ["mintButton", "listingGrid", "buyButton"].includes(type)
+     );
 
-    if (!hasRequiredComponents) {
-      toast.error("Missing components", {
-        description: "Add mint, listing, or buy components to deploy",
-      });
-      return;
-    }
+     if (!hasRequiredComponents) {
+       toast.error("Missing components", {
+         description: "Add mint, listing, or buy components to deploy",
+       });
+       return;
+     }
 
-     setIsDeploying(true);
-     setDeploymentStatus("Initializing backend deployment...");
+      setIsDeploying(true);
+      setDeploymentStatus("Initializing backend deployment...");
 
-      try {
-        // Prompt user for marketplace name
-        const marketplaceName = prompt("Enter a name for your marketplace:", "RealFlow Marketplace");
-        
-        const flowData = {
-          nodes,
-          edges,
-          components: nodeTypes,
-          owner: wallets[0]?.address,
-          name: marketplaceName || "RealFlow Marketplace"
-        };
+       try {
+         // Prompt user for marketplace name
+         const marketplaceName = prompt("Enter a name for your marketplace:", "RealFlow Marketplace");
+         
+         const flowData = {
+           nodes,
+           edges,
+           components: nodeTypes,
+           owner: wallets[0]?.address,
+           name: marketplaceName || "RealFlow Marketplace"
+         };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(flowData),
-      });
+       const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify(flowData),
+       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || `Deployment failed (Status ${response.status})`);
-      }
+       if (!response.ok) {
+         const errorData = await response.json().catch(() => ({}));
+         throw new Error(errorData.error || errorData.message || `Deployment failed (Status ${response.status})`);
+       }
 
-      const result = await response.json();
+       const result = await response.json();
+       
+       // Determine which network was used for deployment based on the result
+       const networkName = result.network || "Polygon Amoy";
+       const explorerBaseUrl = result.explorerBaseUrl || "https://amoy.polygonscan.com";
 
-      setDeploymentStatus("Finalizing...");
+       setDeploymentStatus("Finalizing...");
 
-      toast.success("Marketplace live on Polygon Amoy!", {
-        description: `Tx Hash: ${result.transactionHash}\nFactory: ${result.address}`,
-        action: {
-          label: "View Transaction",
-          onClick: () => window.open(result.explorerUrl || `https://amoy.polygonscan.com/tx/${result.transactionHash}`, "_blank"),
-        },
-      });
+       toast.success(`Marketplace live on ${networkName}!`, {
+         description: `Tx Hash: ${result.transactionHash}\nFactory: ${result.address}`,
+         action: {
+           label: "View Transaction",
+           onClick: () => window.open(`${explorerBaseUrl}/tx/${result.transactionHash}`, "_blank"),
+         },
+       });
 
-      localStorage.setItem("deployed-contract", JSON.stringify(result));
-    } catch (error) {
-      console.error("Deployment error:", error);
-      toast.error("Deployment failed", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-      });
-    } finally {
-      setIsDeploying(false);
-      setDeploymentStatus(null);
-    }
-  }, [nodes, edges, toast, authenticated, hasWallet, loginWithWallet, wallets]);
+       localStorage.setItem("deployed-contract", JSON.stringify(result));
+     } catch (error) {
+       console.error("Deployment error:", error);
+       toast.error("Deployment failed", {
+         description: error instanceof Error ? error.message : "An unexpected error occurred",
+       });
+     } finally {
+       setIsDeploying(false);
+       setDeploymentStatus(null);
+     }
+   }, [nodes, edges, toast, authenticated, hasWallet, loginWithWallet, wallets]);
 
   // =====================
   // ZOOM CONTROLS
@@ -601,6 +621,22 @@ function BuilderCanvas() {
                 <Blocks className="w-3 h-3 text-white" />
               </div>
               <span className="font-semibold text-sm">Builder</span>
+            </div>
+            
+            {/* Network Selector */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  // Import and use ContractService here would require refactoring
+                  // For now, we'll show a toast indicating the feature
+                  toast.info("Network switching: Would toggle between Polygon Amoy and Avalanche Fuji");
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                <MapPin className="w-4 h-4" />
+                <span className="text-xs font-medium">Polygon Amoy</span>
+                <ChevronDown className="w-3 h-3" />
+              </button>
             </div>
 
             <div className="h-5 w-px bg-[var(--border)]" />

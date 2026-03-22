@@ -322,15 +322,15 @@ const Settings = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Transaction History</CardTitle>
-                  <CardDescription>View your past transactions on Polygon Amoy</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {mockTransactions.length > 0 ? (
-                    <div className="space-y-3">
-                      {mockTransactions.map((tx) => (
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Transaction History</CardTitle>
+                   <CardDescription>View your past transactions on Polygon Amoy</CardDescription>
+                 </CardHeader>
+                 <CardContent>
+                   {transactionsData && transactionsData.length > 0 ? (
+                     <div className="space-y-3">
+                      {transactionsData.map((tx) => (
                         <div 
                           key={tx.hash}
                           className="flex items-center gap-3 p-3 rounded-lg border hover:bg-secondary/30 transition-colors cursor-pointer"
@@ -371,23 +371,15 @@ const Settings = () => {
                           <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
                         </div>
                       ))}
-                      <Button 
-                        variant="outline" 
-                        className="w-full mt-4"
-                        onClick={() => user.address && window.open(`https://amoy.polygonscan.com/address/${user.address}`, "_blank")}
-                      >
-                        View All on Explorer
-                        <ExternalLink className="w-4 h-4 ml-2" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">No transactions yet</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                     </div>
+                   ) : (
+                     <div className="text-center py-8">
+                       <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                       <p className="text-muted-foreground">No transactions yet</p>
+                     </div>
+                   )}
+                 </CardContent>
+               </Card>
 
               <Card>
                 <CardHeader>
