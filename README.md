@@ -271,10 +271,10 @@ PINATA_API_SECRET=your_pinata_api_secret
 DEPLOYER_PRIVATE_KEY=your_deployer_private_key
 # Polygon Amoy Testnet
 POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
-MARKETPLACE_FACTORY_ADDRESS=0x802A6843516f52144b3F1D04E5447A085d34aF37
+MARKETPLACE_FACTORY_ADDRESS=0x895605cfacb5f0d9de464dce03b81df73bd3783c
 # Avalanche Fuji Testnet
 AVALANCHE_FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
-AVALANCHE_FACTORY_ADDRESS=0xYourAvalancheFactoryAddress
+AVALANCHE_CONTRACT_ADDRESS=0x62f0be8a94f7e348f15f6f373e35ae5c34f7d40f
 
 # Security
 CORS_ORIGIN=http://localhost:5173
@@ -376,6 +376,50 @@ journey
 - Efficient data structures
 - Minimal storage usage
 
+## 🔗 Deployed Contracts
+
+### Avalanche Fuji Testnet (Chain ID: 43113)
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| RWATokenizer | `0xc880af5d5ac3ea27c26c47d132661a710c245ea5` | [SnowTrace](https://testnet.snowtrace.io/address/0xc880af5d5ac3ea27c26c47d132661a710c245ea5) |
+| MarketplaceFactory | `0x62f0be8a94f7e348f15f6f373e35ae5c34f7d40f` | [SnowTrace](https://testnet.snowtrace.io/address/0x62f0be8a94f7e348f15f6f373e35ae5c34f7d40f) |
+| Real Estate RWA Marketplace | `0x06Cebc9403C00d972e014E452509d04c7C350880` | [SnowTrace](https://testnet.snowtrace.io/address/0x06Cebc9403C00d972e014E452509d04c7C350880) |
+
+### Polygon Amoy Testnet (Chain ID: 80002)
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| RWATokenizer | `0x6ead743c9122a6c47212e4808edd49e260c1172b` | [Polygonscan](https://amoy.polygonscan.com/address/0x6ead743c9122a6c47212e4808edd49e260c1172b) |
+| MarketplaceFactory | `0x895605cfacb5f0d9de464dce03b81df73bd3783c` | [Polygonscan](https://amoy.polygonscan.com/address/0x895605cfacb5f0d9de464dce03b81df73bd3783c) |
+| Polygon Real Estate Hub | `0x32176423853891a310A874132185C02EF90A03ce` | [Polygonscan](https://amoy.polygonscan.com/address/0x32176423853891a310A874132185C02EF90A03ce) |
+
+### Deployment Configuration
+
+Update your `backend/.env` with the deployed contract addresses:
+
+```env
+# Avalanche Fuji
+AVALANCHE_FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
+AVALANCHE_CONTRACT_ADDRESS=0x62f0be8a94f7e348f15f6f373e35ae5c34f7d40f
+
+# Polygon Amoy
+POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
+MARKETPLACE_FACTORY_ADDRESS=0x895605cfacb5f0d9de464dce03b81df73bd3783c
+```
+
+### Deploy New Marketplaces
+
+Use the deployment script to deploy new marketplaces:
+
+```bash
+# Deploy to Avalanche Fuji
+node scripts/deploy-marketplace.js avalanche
+
+# Deploy to Polygon Amoy
+node scripts/deploy-marketplace.js polygon
+```
+
 ## 🧪 Testing
 
 ### Frontend Tests
@@ -442,10 +486,12 @@ railway up
 
 ### Smart Contract Deployment
 ```bash
-# Deploy to Polygon Amoy testnet
-forge script script/Deploy.s.sol --rpc-url polygonAmoy --private-key $PRIVATE_KEY --broadcast
+# Deploy using the deployment script (recommended)
+node scripts/deploy-marketplace.js polygon    # Deploy to Polygon Amoy
+node scripts/deploy-marketplace.js avalanche   # Deploy to Avalanche Fuji
 
-# Deploy to Avalanche Fuji testnet
+# Or deploy manually using Foundry
+forge script script/Deploy.s.sol --rpc-url polygonAmoy --private-key $PRIVATE_KEY --broadcast
 forge script script/Deploy.s.sol --rpc-url avalancheFuji --private-key $PRIVATE_KEY --broadcast
 
 # Verify on PolygonScan
@@ -498,9 +544,10 @@ Built for **Aleph Hackathon 2026** - AI + RWA Track.
 - **Development Time**: 48 hours
 - **Lines of Code**: ~15,000
 - **Test Coverage**: 85%+
-- **Smart Contracts**: 3 deployed
+- **Smart Contracts**: 6 deployed (3 on Avalanche + 3 on Polygon)
 - **API Endpoints**: 12
 - **Components**: 50+
+- **Supported Networks**: Polygon Amoy, Avalanche Fuji
 
 ---
 
