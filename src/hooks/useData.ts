@@ -110,27 +110,6 @@ export function useMarketplaces(params?: { status?: string; category?: string; s
     try {
       let marketplaces = contractMarketplaces || [];
       
-      // If blockchain returns no marketplaces, fall back to API for demo data
-      if (marketplaces.length === 0) {
-        console.log("No blockchain marketplaces found, fetching from API...");
-        try {
-          const queryParams = new URLSearchParams();
-          if (params?.status && params.status !== 'all') queryParams.set("status", params.status);
-          if (params?.category && params.category !== 'all') queryParams.set("category", params.category);
-          if (params?.search) queryParams.set("search", params.search);
-
-          const query = queryParams.toString();
-          const response = await fetch(`${API_URL}/api/marketplaces${query ? `?${query}` : ''}`);
-          
-          if (response.ok) {
-            const result = await response.json();
-            marketplaces = result.data || [];
-          }
-        } catch (apiErr) {
-          console.error("API fallback failed:", apiErr);
-        }
-      }
-      
       // Apply filters
       if (params?.status && params.status !== 'all') {
         marketplaces = marketplaces.filter(m => m.status === params.status);
@@ -151,27 +130,9 @@ export function useMarketplaces(params?: { status?: string; category?: string; s
     } catch (err) {
       console.error("Failed to fetch marketplaces:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch marketplaces");
-      
-      // Fallback to API if blockchain data fails
-      try {
-        const queryParams = new URLSearchParams();
-        if (params?.status && params.status !== 'all') queryParams.set("status", params.status);
-        if (params?.category && params.category !== 'all') queryParams.set("category", params.category);
-        if (params?.search) queryParams.set("search", params.search);
-
-        const query = queryParams.toString();
-        const endpoint = `/api/marketplaces${query ? `?${query}` : ""}`;
-        
-        const result = await apiRequest<Marketplace[]>(endpoint);
-        setData(Array.isArray(result) ? result : []);
-      } catch (apiErr) {
-        console.error("API fallback also failed:", apiErr);
-        setData([]);
-      }
-    } finally {
-      setLoading(false);
+      setData([]);
     }
-  }, [params?.status, params?.category, params?.search, contractMarketplaces]);
+  }, [contractMarketplaces, params?.status, params?.category, params?.search]);
 
   useEffect(() => {
     if (!contractLoading) {

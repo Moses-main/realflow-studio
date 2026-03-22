@@ -112,11 +112,31 @@ const MarketplaceFactoryABI = [
   },
 ] as const;
 
-// Contract addresses from the README
+// Contract addresses from deployment
 const CONTRACTS = {
-  RWATokenizer: '0xc9497Ec40951FbB98C02c666b7F9Fa143678E2Be' as const,
-  MarketplaceFactory: '0x802A6843516f52144b3F1D04E5447A085d34aF37' as const,
+  // Polygon Amoy
+  RWATokenizer: '0x6ead743c9122a6c47212e4808edd49e260c1172b' as const,
+  MarketplaceFactory: '0x895605cfacb5f0d9de464dce03b81df73bd3783c' as const,
+  // Avalanche Fuji
+  RWATokenizerAvalanche: '0xc880af5d5ac3ea27c26c47d132661a710c245ea5' as const,
+  MarketplaceFactoryAvalanche: '0x62f0be8a94f7e348f15f6f373e35ae5c34f7d40f' as const,
 } as const;
+
+// Deployed marketplace addresses
+const DEPLOYED_MARKETPLACES = [
+  {
+    address: '0x06Cebc9403C00d972e014E452509d04c7C350880',
+    network: 'avalanche' as const,
+    name: 'Real Estate RWA Marketplace',
+    category: 'real-estate',
+  },
+  {
+    address: '0x32176423853891a310A874132185C02EF90A03ce',
+    network: 'polygon' as const,
+    name: 'Polygon Real Estate Hub',
+    category: 'real-estate',
+  },
+] as const;
 
 // Network selection - default to Polygon Amoy for backward compatibility
 let activeChain = polygonAmoy;
@@ -164,30 +184,66 @@ export const marketplaceFactoryContract = {
 
 // Service functions
 export class ContractService {
-  // Get marketplace data from factory
+  // Get marketplace data from deployed marketplaces
   static async getMarketplaces() {
     try {
-      const publicClient = createPublicClientForNetwork();
-      const marketplaces = await publicClient.readContract({
-        ...marketplaceFactoryContract,
-        functionName: 'getMarketplaces',
+      // Get data for each deployed marketplace from both networks
+      const polygonClient = createPublicClient({
+        chain: polygonAmoy,
+        transport: http('https://rpc-amoy.polygon.technology/'),
+      });
+
+      const avalancheClient = createPublicClient({
+        chain: avalancheFuji,
+        transport: http('https://api.avax-test.network/ext/bc/C/rpc'),
       });
 
       const marketplaceDetails = await Promise.all(
-        marketplaces.map(async (address) => {
-          const [owner, tokenizer, createdAt, active] = await publicClient.readContract({
-            ...marketplaceFactoryContract,
-            functionName: 'marketplaces',
-            args: [address],
-          });
+        DEPLOYED_MARKETPLACES.map(async (mp) => {
+          try {
+            const client = mp.network === 'avalanche' ? avalancheClient : polygonClient;
+            const factoryAddress = mp.network === 'avalanche' 
+              ? CONTRACTS.MarketplaceFactoryAvalanche 
+              : CONTRACTS.MarketplaceFactory;
 
-          return {
-            address,
-            owner,
-            tokenizer,
-            createdAt: new Date(Number(createdAt) * 1000).toISOString(),
-            active,
-          };
+            // Try to get marketplace info from the factory
+            let owner = 'Unknown';
+            let active = true;
+            
+            try {
+              const result = await client.readContract({
+                address: factoryAddress,
+                abi: MarketplaceFactoryABI,
+                functionName: 'marketplaces',
+                args: [mp.address as `0x${string}`],
+              });
+              owner = result[0] || 'Unknown';
+              active = result[3] || true;
+            } catch {
+              // Use default values if read fails
+            }
+
+            return {
+              address: mp.address,
+              owner,
+              name: mp.name,
+              category: mp.category,
+              network: mp.network,
+              createdAt: new Date().toISOString(),
+              active,
+            };
+          } catch (error) {
+            console.error(`Error fetching marketplace ${mp.address}:`, error);
+            return {
+              address: mp.address,
+              owner: 'Unknown',
+              name: mp.name,
+              category: mp.category,
+              network: mp.network,
+              createdAt: new Date().toISOString(),
+              active: true,
+            };
+          }
         })
       );
 
@@ -196,6 +252,12 @@ export class ContractService {
       console.error('Error fetching marketplaces:', error);
       return [];
     }
+  }
+
+  // Get marketplaces for a specific network
+  static async getMarketplacesByNetwork(network: 'polygon' | 'avalanche') {
+    const allMarketplaces = await this.getMarketplaces();
+    return allMarketplaces.filter(m => m.network === network);
   }
 
   // Get token supply for a specific token ID

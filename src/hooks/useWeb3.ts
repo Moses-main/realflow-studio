@@ -133,17 +133,21 @@ export function useContractMarketplaces() {
       const marketplaces = await ContractService.getMarketplaces();
       
       // Transform data to match Marketplace interface
-      const transformedMarketplaces = marketplaces.map((mp, index) => ({
+      const transformedMarketplaces = marketplaces.map((mp) => ({
         id: mp.address,
-        name: `Marketplace ${index + 1}`,
+        name: mp.name || `Marketplace ${mp.address.slice(0, 8)}`,
         status: mp.active ? 'live' : 'paused',
-        category: 'real-estate', // Default category
-        assets: 0, // Would need to query token contracts
+        category: mp.category || 'real-estate',
+        network: mp.network,
+        assets: 0,
         volume: '0',
         volumeFormatted: '$0',
         address: mp.address,
         createdAt: mp.createdAt,
-        description: `Deployed marketplace at ${ContractService.formatAddress(mp.address)}`,
+        description: `Real blockchain marketplace on ${mp.network === 'avalanche' ? 'Avalanche' : 'Polygon'}`,
+        explorerUrl: mp.network === 'avalanche' 
+          ? `https://testnet.snowtrace.io/address/${mp.address}`
+          : `https://amoy.polygonscan.com/address/${mp.address}`,
       }));
 
       setData(transformedMarketplaces);
