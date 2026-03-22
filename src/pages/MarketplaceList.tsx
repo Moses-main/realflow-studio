@@ -22,45 +22,13 @@ import {
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { ConnectButton } from "@/components/auth/ConnectButton";
+import { useMarketplaces } from "@/hooks/useData";
 
 const categories = [
   { id: "all", label: "All", icon: Package },
   { id: "real-estate", label: "Real Estate", icon: Building2 },
   { id: "art", label: "Art & Collectibles", icon: Palette },
   { id: "commodities", label: "Commodities", icon: Coins },
-];
-
-const mockMarketplaces = [
-  { 
-    id: "1", 
-    name: "Lagos Real Estate Hub", 
-    status: "live", 
-    category: "real-estate",
-    assets: 24, 
-    volume: "$142K",
-    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0f123",
-    createdAt: "2024-01-15"
-  },
-  { 
-    id: "2", 
-    name: "Buenos Aires Art Market", 
-    status: "draft", 
-    category: "art",
-    assets: 8, 
-    volume: "$0",
-    address: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    createdAt: "2024-02-20"
-  },
-  { 
-    id: "3", 
-    name: "Mexico Commodity Exchange", 
-    status: "live", 
-    category: "commodities",
-    assets: 56, 
-    volume: "$890K",
-    address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
-    createdAt: "2024-03-10"
-  },
 ];
 
 const MarketplaceCard = ({ marketplace }: { marketplace: typeof mockMarketplaces[0] }) => {

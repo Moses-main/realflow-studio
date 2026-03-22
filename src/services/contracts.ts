@@ -1,4 +1,4 @@
-import { createPublicClient, http, formatUnits, parseUnits } from 'viem';
+import { createPublicClient, http, formatUnits, parseUnits, Chain } from 'viem';
 
 // Define Polygon Amoy chain manually since it's not in viem by default
 const polygonAmoy = {
@@ -7,13 +7,32 @@ const polygonAmoy = {
   network: 'polygon-amoy',
   nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://rpc-amoy.polygon.technology/'] },
-    public: { http: ['https://rpc-amoy.polygon.technology/'] },
+    default: { http: ['https://rpc-amoy.polygon.technology/'] as string[] },
+    public: { http: ['https://rpc-amoy.polygon.technology/'] as string[] },
   },
   blockExplorers: {
     default: { 
       name: 'PolygonScan', 
       url: 'https://amoy.polygonscan.com' 
+    },
+  },
+  testnet: true,
+};
+
+// Define Avalanche Fuji Testnet chain
+const avalancheFuji = {
+  id: 43113,
+  name: 'Avalanche Fuji Testnet',
+  network: 'avalanche-fuji',
+  nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] as string[] },
+    public: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] as string[] },
+  },
+  blockExplorers: {
+    default: { 
+      name: 'SnowTrace', 
+      url: 'https://testnet.snowtrace.io' 
     },
   },
   testnet: true,
@@ -99,11 +118,31 @@ const CONTRACTS = {
   MarketplaceFactory: '0x802A6843516f52144b3F1D04E5447A085d34aF37' as const,
 } as const;
 
-// Create public client for read operations
-export const publicClient = createPublicClient({
-  chain: polygonAmoy,
-  transport: http('https://rpc-amoy.polygon.technology'),
-});
+// Network selection - default to Polygon Amoy for backward compatibility
+let activeChain = polygonAmoy;
+let activeRpcUrl = 'https://rpc-amoy.polygon.technology';
+
+// Function to set the active network
+export const setActiveNetwork = (chain: 'polygon' | 'avalanche') => {
+  if (chain === 'avalanche') {
+    activeChain = avalancheFuji;
+    activeRpcUrl = 'https://api.avax-test.network/ext/bc/C/rpc';
+  } else {
+    activeChain = polygonAmoy;
+    activeRpcUrl = 'https://rpc-amoy.polygon.technology';
+  }
+};
+
+// Create public client for read operations - will be updated when network changes
+export const createPublicClientForNetwork = () => {
+  return createPublicClient({
+    chain: activeChain,
+    transport: http(activeRpcUrl),
+  });
+};
+
+// Initialize default public client
+export const publicClient = createPublicClientForNetwork();
 
 // Create wallet client for write operations - to be implemented with Privy
 // export const createWalletClient = (walletAddress: string) => {
@@ -128,6 +167,7 @@ export class ContractService {
   // Get marketplace data from factory
   static async getMarketplaces() {
     try {
+      const publicClient = createPublicClientForNetwork();
       const marketplaces = await publicClient.readContract({
         ...marketplaceFactoryContract,
         functionName: 'getMarketplaces',
@@ -161,6 +201,7 @@ export class ContractService {
   // Get token supply for a specific token ID
   static async getTokenSupply(tokenId: number) {
     try {
+      const publicClient = createPublicClientForNetwork();
       const supply = await publicClient.readContract({
         ...rwatTokenizerContract,
         functionName: 'totalSupply',
@@ -177,6 +218,7 @@ export class ContractService {
   // Get balance of tokens for an address
   static async getTokenBalance(address: string, tokenId: number) {
     try {
+      const publicClient = createPublicClientForNetwork();
       const balance = await publicClient.readContract({
         ...rwatTokenizerContract,
         functionName: 'balanceOf',

@@ -82,15 +82,15 @@ router.post('/', async (req, res, next) => {
     try {
       const rootDir = path.resolve(__dirname, '../../../');
       
-      // 1. Load RWATokenizer artifact
-      const tokenizerPath = path.join(rootDir, 'out/RWATokenizer.sol/RWATokenizer.json');
+       // 1. Load RWATokenizer artifact
+       const tokenizerPath = path.join(rootDir, 'src/out/RWATokenizer.sol/RWATokenizer.json');
       if (!fs.existsSync(tokenizerPath)) {
         throw new Error(`Tokenizer artifact not found at ${tokenizerPath}. Please run 'forge build' in the contracts directory.`);
       }
       const tokenizerArtifact = JSON.parse(fs.readFileSync(tokenizerPath, 'utf8'));
 
       // 2. Load MarketplaceFactory artifact
-      const factoryPath = path.join(rootDir, 'out/MarketplaceFactory.sol/MarketplaceFactory.json');
+      const factoryPath = path.join(rootDir, 'src/out/MarketplaceFactory.sol/MarketplaceFactory.json');
       if (!fs.existsSync(factoryPath)) {
         throw new Error(`Factory artifact not found at ${factoryPath}. Please run 'forge build' in the contracts directory.`);
       }
