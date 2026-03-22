@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useContractStats, useContractMarketplaces } from "./useWeb3";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -96,35 +97,66 @@ export function useMarketplaces(params?: { status?: string; category?: string; s
   const [data, setData] = useState<Marketplace[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use real blockchain data
+  const { data: contractMarketplaces, loading: contractLoading, error: contractError } = useContractMarketplaces();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    
     try {
-      const queryParams = new URLSearchParams();
-      if (params?.status) queryParams.set("status", params.status);
-      if (params?.category) queryParams.set("category", params.category);
-      if (params?.search) queryParams.set("search", params.search);
-
-      const query = queryParams.toString();
-      const endpoint = `/api/marketplaces${query ? `?${query}` : ""}`;
+      let marketplaces = contractMarketplaces || [];
       
-      const result = await apiRequest<Marketplace[]>(endpoint);
-      setData(Array.isArray(result) ? result : []);
+      // Apply filters
+      if (params?.status && params.status !== 'all') {
+        marketplaces = marketplaces.filter(m => m.status === params.status);
+      }
+      if (params?.category && params.category !== 'all') {
+        marketplaces = marketplaces.filter(m => m.category === params.category);
+      }
+      if (params?.search) {
+        const searchLower = params.search.toLowerCase();
+        marketplaces = marketplaces.filter(m => 
+          m.name.toLowerCase().includes(searchLower) ||
+          m.category.toLowerCase().includes(searchLower) ||
+          m.description?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      setData(marketplaces);
     } catch (err) {
       console.error("Failed to fetch marketplaces:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch marketplaces");
-      setData([]);
+      
+      // Fallback to API if blockchain data fails
+      try {
+        const queryParams = new URLSearchParams();
+        if (params?.status) queryParams.set("status", params.status);
+        if (params?.category) queryParams.set("category", params.category);
+        if (params?.search) queryParams.set("search", params.search);
+
+        const query = queryParams.toString();
+        const endpoint = `/api/marketplaces${query ? `?${query}` : ""}`;
+        
+        const result = await apiRequest<Marketplace[]>(endpoint);
+        setData(Array.isArray(result) ? result : []);
+      } catch (apiErr) {
+        console.error("API fallback also failed:", apiErr);
+        setData([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [params?.status, params?.category, params?.search]);
+  }, [params?.status, params?.category, params?.search, contractMarketplaces]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!contractLoading) {
+      fetchData();
+    }
+  }, [fetchData, contractLoading]);
 
-  return { data, loading, error, refetch: fetchData };
+  return { data, loading: loading || contractLoading, error: error || contractError, refetch: fetchData };
 }
 
 export function useMarketplaceById(id: string): UseDataResult<Marketplace | null> {
@@ -160,12 +192,12 @@ export function useMarketplaceById(id: string): UseDataResult<Marketplace | null
 }
 
 const TEMPLATES: Template[] = [
-  { id: "1", name: "NFT Marketplace", desc: "Basic trading", components: 5, category: "Standard" },
-  { id: "2", name: "Creator Portfolio", desc: "Showcase works", components: 4, category: "Gallery" },
-  { id: "3", name: "Digital Gallery", desc: "Browse collections", components: 4, category: "Gallery" },
-  { id: "4", name: "Full Platform", desc: "All features", components: 6, category: "Enterprise" },
-  { id: "5", name: "Auction House", desc: "Timed auctions", components: 5, category: "Trading" },
-  { id: "6", name: "Fractional Ownership", desc: "Shared assets", components: 5, category: "Finance" },
+  { id: "real-estate", name: "Real Estate Marketplace", desc: "Tokenize properties", components: 6, category: "RWA" },
+  { id: "art-gallery", name: "Art Gallery", desc: "Digital art trading", components: 5, category: "Creative" },
+  { id: "music-rights", name: "Music Rights", desc: "Royalty sharing", components: 4, category: "Media" },
+  { id: "commodities", name: "Commodities Exchange", desc: "Physical goods", components: 5, category: "Trading" },
+  { id: "intellectual-property", name: "IP Marketplace", desc: "Patents & trademarks", components: 4, category: "Legal" },
+  { id: "custom", name: "Custom Marketplace", desc: "Build your own", components: 8, category: "Advanced" },
 ];
 
 export function useTemplates(): UseDataResult<Template[]> {
@@ -196,30 +228,72 @@ export function useStats(): UseDataResult<Stat[]> {
   const [data, setData] = useState<Stat[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use real blockchain data
+  const { data: contractStats, loading: contractLoading, error: contractError } = useContractStats();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    
     try {
-      const stats: Stat[] = [
-        { label: "Total Value Locked", value: "$124,500", change: "+12.5%", icon: "TrendingUp", positive: true },
-        { label: "Transactions", value: "1,284", change: "+8.2%", icon: "TrendingUp", positive: true },
-        { label: "NFTs Minted", value: "892", change: "+15.3%", icon: "TrendingUp", positive: true },
+      if (contractStats) {
+        const stats: Stat[] = [
+          { 
+            label: "Total Marketplaces", 
+            value: contractStats.totalMarketplaces.toString(), 
+            change: contractStats.activeMarketplaces > 0 ? `+${contractStats.activeMarketplaces}` : null, 
+            icon: "TrendingUp", 
+            positive: true 
+          },
+          { 
+            label: "Active Marketplaces", 
+            value: contractStats.activeMarketplaces.toString(), 
+            change: null, 
+            icon: "TrendingUp", 
+            positive: true 
+          },
+          { 
+            label: "Tokens Minted", 
+            value: contractStats.totalTokensMinted.toString(), 
+            change: contractStats.totalTokensMinted > 0 ? "+New" : null, 
+            icon: "TrendingUp", 
+            positive: true 
+          },
+          { 
+            label: "Platform Fee", 
+            value: contractStats.platformFee, 
+            change: null, 
+            icon: "Wallet", 
+            positive: true 
+          },
+        ];
+        setData(stats);
+      }
+    } catch (err) {
+      console.error('Error processing stats:', err);
+      setError(err instanceof Error ? err.message : "Failed to process stats");
+      
+      // Fallback to dummy data if blockchain data fails
+      const fallbackStats: Stat[] = [
+        { label: "Total Marketplaces", value: "0", change: null, icon: "TrendingUp", positive: true },
+        { label: "Active Marketplaces", value: "0", change: null, icon: "TrendingUp", positive: true },
+        { label: "Tokens Minted", value: "0", change: null, icon: "TrendingUp", positive: true },
         { label: "Platform Fee", value: "0.5%", change: null, icon: "Wallet", positive: true },
       ];
-      setData(stats);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch stats");
+      setData(fallbackStats);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [contractStats]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!contractLoading) {
+      fetchData();
+    }
+  }, [fetchData, contractLoading]);
 
-  return { data, loading, error, refetch: fetchData };
+  return { data, loading: loading || contractLoading, error: error || contractError, refetch: fetchData };
 }
 
 export function useTransactions(): UseDataResult<Transaction[]> {
@@ -231,16 +305,13 @@ export function useTransactions(): UseDataResult<Transaction[]> {
     setLoading(true);
     setError(null);
     try {
-      const transactions: Transaction[] = [
-        { hash: "0x8f2e9...4a7b1", type: "deploy", amount: "0.023 MATIC", timestamp: "2 mins ago", status: "success", description: "MarketplaceFactory deployed" },
-        { hash: "0x3c4d5...9e2f0", type: "mint", amount: "100 ERC-1155", timestamp: "15 mins ago", status: "success", description: "Tokenized Lagos Property" },
-        { hash: "0x7b8c9...1d3e4", type: "transfer", amount: "0.005 MATIC", timestamp: "1 hour ago", status: "success", description: "Storage deposit" },
-        { hash: "0x2a3b4...5c6d7", type: "swap", amount: "50 ERC-1155", timestamp: "3 hours ago", status: "success", description: "Fraction purchased" },
-        { hash: "0x1x2y3...8z9w0", type: "deploy", amount: "0.021 MATIC", timestamp: "1 day ago", status: "success", description: "RWATokenizer deployed" },
-      ];
+      // For now, return empty array as we'll implement real blockchain transactions
+      // This will be updated to fetch from PolygonScan API
+      const transactions: Transaction[] = [];
       setData(transactions);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch transactions");
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -262,28 +333,30 @@ export function useAnalytics(): UseDataResult<{ volumeData: VolumeData[]; assetB
     setLoading(true);
     setError(null);
     try {
-      const baseValue = 50000;
-      const volumeData: VolumeData[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        volumeData.push({
-          date: date.toLocaleDateString("en-US", { weekday: "short" }),
-          value: baseValue + Math.floor(Math.random() * 20000) - 10000,
-        });
-      }
+      // Generate sample analytics data based on actual marketplaces
+      // In a real implementation, this would fetch from blockchain analytics APIs
+      const volumeData: VolumeData[] = [
+        { date: "Mon", value: 0 },
+        { date: "Tue", value: 0 },
+        { date: "Wed", value: 0 },
+        { date: "Thu", value: 0 },
+        { date: "Fri", value: 0 },
+        { date: "Sat", value: 0 },
+        { date: "Sun", value: 0 },
+      ];
 
       const assetBreakdown: AssetBreakdown[] = [
-        { name: "Real Estate", value: 45, color: "#5e6ad2" },
-        { name: "Art", value: 25, color: "#10b981" },
-        { name: "Commodities", value: 15, color: "#f59e0b" },
-        { name: "Music Rights", value: 10, color: "#ef4444" },
-        { name: "Other", value: 5, color: "#6b7280" },
+        { name: "Real Estate", value: 0, color: "#5e6ad2" },
+        { name: "Art", value: 0, color: "#10b981" },
+        { name: "Commodities", value: 0, color: "#f59e0b" },
+        { name: "Music Rights", value: 0, color: "#ef4444" },
+        { name: "Intellectual Property", value: 0, color: "#6b7280" },
       ];
 
       setData({ volumeData, assetBreakdown });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch analytics");
+      setData({ volumeData: [], assetBreakdown: [] });
     } finally {
       setLoading(false);
     }

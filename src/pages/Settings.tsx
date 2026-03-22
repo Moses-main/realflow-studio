@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Bell, Shield, Palette,
-  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, ArrowUpRight, ArrowDownLeft, Clock, BadgeCheck, FlaskConical, Save
+  Globe, Wallet, Key, HelpCircle, ExternalLink, Check, Copy, Loader2, 
+  ArrowUpRight, ArrowDownLeft, Clock, BadgeCheck, FlaskConical, Save,
+  Activity, Package, BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,7 @@ import { ConnectButton } from "@/components/auth/ConnectButton";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { useTransactions } from "@/hooks/useData";
 
 interface ProfileForm {
   username: string;
@@ -45,20 +48,13 @@ interface Transaction {
   description: string;
 }
 
-const mockTransactions: Transaction[] = [
-  { hash: "0x8f2e9...4a7b1", type: "deploy", amount: "0.023 MATIC", timestamp: "2 mins ago", status: "success", description: "MarketplaceFactory deployed" },
-  { hash: "0x3c4d5...9e2f0", type: "mint", amount: "100 ERC-1155", timestamp: "15 mins ago", status: "success", description: "Tokenized Lagos Property" },
-  { hash: "0x7b8c9...1d3e4", type: "transfer", amount: "0.005 MATIC", timestamp: "1 hour ago", status: "success", description: "Storage deposit" },
-  { hash: "0x2a3b4...5c6d7", type: "swap", amount: "50 ERC-1155", timestamp: "3 hours ago", status: "success", description: "Fraction purchased" },
-  { hash: "0x1x2y3...8z9w0", type: "deploy", amount: "0.021 MATIC", timestamp: "1 day ago", status: "success", description: "RWATokenizer deployed" },
-];
-
 const MOCK_MODE_KEY = "realflow-mock-mode";
 
 const Settings = () => {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { data: transactionsData, loading: transactionsLoading } = useTransactions();
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,

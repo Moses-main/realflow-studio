@@ -1,7 +1,7 @@
 import { useContractRead, useContractWrite, usePrepareContractWrite, useWaitForTransaction } from "wagmi";
 import { MARKETPLACE_FACTORY_ABI } from "./abis";
 
-const MARKETPLACE_FACTORY_ADDRESS = "0x802A6843516f52144b3F1D04E5447A085d34aF37" as const;
+const MARKETPLACE_FACTORY_ADDRESS = (import.meta.env.VITE_MARKETPLACE_FACTORY_ADDRESS || "0x802A6843516f52144b3F1D04E5447A085d34aF37") as `0x${string}`;
 
 export function useMarketplaceFactory() {
   const { data: owner, isLoading: isLoadingOwner } = useContractRead({

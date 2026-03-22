@@ -452,16 +452,20 @@ function BuilderCanvas() {
       return;
     }
 
-    setIsDeploying(true);
-    setDeploymentStatus("Initializing backend deployment...");
+     setIsDeploying(true);
+     setDeploymentStatus("Initializing backend deployment...");
 
-    try {
-      const flowData = {
-        nodes,
-        edges,
-        components: nodeTypes,
-        owner: wallets[0]?.address
-      };
+      try {
+        // Prompt user for marketplace name
+        const marketplaceName = prompt("Enter a name for your marketplace:", "RealFlow Marketplace");
+        
+        const flowData = {
+          nodes,
+          edges,
+          components: nodeTypes,
+          owner: wallets[0]?.address,
+          name: marketplaceName || "RealFlow Marketplace"
+        };
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/deploy`, {
         method: "POST",

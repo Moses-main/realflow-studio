@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   Blocks, Rocket, ArrowRight, Plus, Settings, Bell,
   TrendingUp, Wallet, ExternalLink, Clock, BarChart3, Home,
-  Loader2, RefreshCw, Package, Globe
+  Loader2, RefreshCw, Package, Globe, Activity
 } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import { ThemeToggleDropdown } from "@/components/theme/ThemeToggle";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/components/theme/LanguageSwitcher";
 import { useStats, useMarketplaces, useTemplates } from "@/hooks/useData";
 import { ConnectButton } from "@/components/auth/ConnectButton";
+import ContractService from "@/services/contracts";
 
 const navItems = [
   { icon: Blocks, label: "Dashboard", path: "/dashboard" },
@@ -25,8 +26,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Dynamic data from hooks
+  // Dynamic data from hooks (now with real blockchain data)
   const { data: statsData, loading: statsLoading, refetch: refetchStats } = useStats();
   const { data: marketplacesData, loading: marketplacesLoading, refetch: refetchMarketplaces } = useMarketplaces();
   const { data: templatesData, loading: templatesLoading, refetch: refetchTemplates } = useTemplates();
@@ -44,6 +46,22 @@ const Dashboard = () => {
 
   const recentMarketplaces = marketplacesData || [];
   const templates = templatesData || [];
+
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchStats(),
+        refetchMarketplaces(),
+        refetchTemplates(),
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex">
@@ -65,6 +83,18 @@ const Dashboard = () => {
               <h1 className="text-base font-semibold text-[var(--text-primary)]">{t("dashboard.title")}</h1>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+                title="Refresh data"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+              </button>
               <ThemeToggleDropdown />
               <button className="p-2 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] transition-colors">
                 <Bell className="w-4 h-4" />
@@ -78,15 +108,62 @@ const Dashboard = () => {
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-heading text-xl mb-1">Welcome back</h2>
-              <p className="text-sm text-[var(--text-secondary)]">Build and manage your RWA marketplaces</p>
+              <h2 className="text-heading text-xl mb-1">Welcome back{user?.name ? `, ${user.name}` : ''}</h2>
+              <p className="text-sm text-[var(--text-secondary)]">Build and manage your RWA marketplaces on Polygon</p>
             </div>
             <button
               onClick={() => navigate("/canvas")}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary flex items-center gap-2 shadow-lg hover:shadow-xl transition-shadow"
             >
               <Plus className="w-4 h-4" />
-              {t("marketplaces.create")}
+              Create Marketplace
+            </button>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <button
+              onClick={() => navigate("/canvas")}
+              className="p-4 rounded-lg surface hover:surface-hover text-left group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center mb-3 group-hover:bg-[var(--primary)]/20 transition-colors">
+                <Plus className="w-4 h-4 text-[var(--primary)]" />
+              </div>
+              <div className="text-sm font-medium text-[var(--text-primary)] mb-1">Create Marketplace</div>
+              <div className="text-xs text-[var(--text-muted)]">Build new RWA marketplace</div>
+            </button>
+            
+            <button
+              onClick={() => navigate("/marketplaces")}
+              className="p-4 rounded-lg surface hover:surface-hover text-left group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[var(--surface-elevated)] flex items-center justify-center mb-3 group-hover:bg-[var(--surface-elevated-hover)] transition-colors">
+                <Package className="w-4 h-4 text-[var(--text-muted)]" />
+              </div>
+              <div className="text-sm font-medium text-[var(--text-primary)] mb-1">My Marketplaces</div>
+              <div className="text-xs text-[var(--text-muted)]">Manage deployed marketplaces</div>
+            </button>
+            
+            <button
+              onClick={() => navigate("/analytics")}
+              className="p-4 rounded-lg surface hover:surface-hover text-left group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[var(--surface-elevated)] flex items-center justify-center mb-3 group-hover:bg-[var(--surface-elevated-hover)] transition-colors">
+                <BarChart3 className="w-4 h-4 text-[var(--text-muted)]" />
+              </div>
+              <div className="text-sm font-medium text-[var(--text-primary)] mb-1">Analytics</div>
+              <div className="text-xs text-[var(--text-muted)]">View performance metrics</div>
+            </button>
+            
+            <button
+              onClick={() => navigate("/explore")}
+              className="p-4 rounded-lg surface hover:surface-hover text-left group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[var(--surface-elevated)] flex items-center justify-center mb-3 group-hover:bg-[var(--surface-elevated-hover)] transition-colors">
+                <Globe className="w-4 h-4 text-[var(--text-muted)]" />
+              </div>
+              <div className="text-sm font-medium text-[var(--text-primary)] mb-1">Explore</div>
+              <div className="text-xs text-[var(--text-muted)]">Discover marketplaces</div>
             </button>
           </div>
 
@@ -120,9 +197,15 @@ const Dashboard = () => {
                 <div className="text-2xl font-semibold text-[var(--text-primary)] mb-1">{stat.value}</div>
                 {stat.change && (
                   <span className={`text-xs ${stat.positive ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                    {stat.change} from last month
+                    {stat.change}
                   </span>
                 )}
+                <div className="text-xs text-[var(--text-muted)] mt-1">
+                  {stat.label === "Total Marketplaces" && "Deployed contracts"}
+                  {stat.label === "Active Marketplaces" && "Live on Polygon"}
+                  {stat.label === "Tokens Minted" && "ERC-1155 tokens"}
+                  {stat.label === "Platform Fee" && "Per transaction"}
+                </div>
               </motion.div>
             )) : (
               <div className="col-span-4 text-center py-8 text-[var(--text-muted)]">No stats available</div>
@@ -156,9 +239,9 @@ const Dashboard = () => {
                 ) : recentMarketplaces.length > 0 ? (
                   recentMarketplaces.map((marketplace) => (
                   <div
-                    key={marketplace.name}
+                    key={marketplace.id}
                     className="flex items-center justify-between p-3 rounded-lg surface-hover cursor-pointer"
-                    onClick={() => navigate("/marketplaces")}
+                    onClick={() => navigate(`/marketplaces/${marketplace.id}`)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[var(--surface-elevated)] flex items-center justify-center">
@@ -168,20 +251,42 @@ const Dashboard = () => {
                         <div className="text-sm font-medium text-[var(--text-primary)]">{marketplace.name}</div>
                         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                           <Clock className="w-3 h-3" />
-                          {marketplace.date}
+                          {new Date(marketplace.createdAt).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`badge-${marketplace.status === "active" ? "success" : "warning"} mb-1`}>
+                      <div className={`badge-${marketplace.status === "live" ? "success" : "warning"} mb-1`}>
                         {marketplace.status}
                       </div>
-                      <div className="text-xs text-[var(--text-muted)]">{marketplace.txs} txns • {marketplace.value}</div>
+                      <div className="text-xs text-[var(--text-muted)]">
+                        {marketplace.assets} assets • {marketplace.volumeFormatted}
+                      </div>
+                      <a
+                        href={ContractService.getAddressUrl(marketplace.address)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View
+                      </a>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-4 text-[var(--text-muted)] text-sm">No marketplaces found</div>
+                  <div className="text-center py-4 text-[var(--text-muted)] text-sm">
+                    <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    No marketplaces found on blockchain
+                    <br />
+                    <button
+                      onClick={() => navigate("/canvas")}
+                      className="text-[var(--primary)] hover:underline mt-2"
+                    >
+                      Deploy your first marketplace
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -204,18 +309,22 @@ const Dashboard = () => {
                   templates.slice(0, 4).map((template) => (
                     <button
                       key={template.id}
-                      onClick={() => navigate("/canvas")}
+                      onClick={() => navigate(`/canvas?template=${template.id}`)}
                       className="w-full p-3 rounded-lg surface-hover text-left flex items-center justify-between group"
                     >
                       <div>
                         <div className="text-sm font-medium text-[var(--text-primary)]">{template.name}</div>
                         <div className="text-xs text-[var(--text-muted)]">{template.desc} • {template.components} components</div>
+                        <div className="text-xs text-[var(--primary)] mt-1">{template.category}</div>
                       </div>
                       <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
                     </button>
                   ))
                 ) : (
-                  <div className="text-center py-4 text-[var(--text-muted)] text-sm">No templates available</div>
+                  <div className="text-center py-4 text-[var(--text-muted)] text-sm">
+                    <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    No templates available
+                  </div>
                 )}
               </div>
               
@@ -229,20 +338,80 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Activity Chart Placeholder */}
+          {/* Blockchain Activity */}
           <div className="mt-6 surface p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-subheading">Activity</h3>
+              <h3 className="text-subheading">Recent Blockchain Activity</h3>
               <div className="flex items-center gap-2">
-                <button className="badge-primary">7D</button>
-                <button className="badge bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]">30D</button>
-                <button className="badge bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]">90D</button>
+                <a
+                  href="https://amoy.polygonscan.com/address/0x802A6843516f52144b3F1D04E5447A085d34aF37"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Factory Contract
+                </a>
               </div>
             </div>
-            <div className="h-48 bg-[var(--surface-elevated)] rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <BarChart3 className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-2 opacity-50" />
-                <p className="text-sm text-[var(--text-muted)]">Activity chart placeholder</p>
+            <div className="space-y-3">
+              {recentMarketplaces.length > 0 ? (
+                recentMarketplaces.slice(0, 3).map((marketplace) => (
+                  <div key={marketplace.id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--surface-elevated)]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
+                        <Rocket className="w-4 h-4 text-[var(--primary)]" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-[var(--text-primary)]">
+                          {marketplace.name} deployed
+                        </div>
+                        <div className="text-xs text-[var(--text-muted)]">
+                          {new Date(marketplace.createdAt).toLocaleDateString()} • {marketplace.status}
+                        </div>
+                      </div>
+                    </div>
+                    <a
+                      href={ContractService.getAddressUrl(marketplace.address)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      View
+                    </a>
+                  </div>
+                ))
+              ) : (
+                <div className="h-32 bg-[var(--surface-elevated)] rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <Activity className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-[var(--text-muted)] mb-2">No recent activity</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Deploy your first marketplace to see activity
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-[var(--border)]">
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Polygon Amoy</span>
+                  </div>
+                  <span>Chain ID: 80002</span>
+                </div>
+                <a
+                  href="https://amoy.polygonscan.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--primary)] hover:underline"
+                >
+                  View Explorer
+                </a>
               </div>
             </div>
           </div>
